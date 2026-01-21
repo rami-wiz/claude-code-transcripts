@@ -3,6 +3,10 @@
 {% block title %}Claude Code transcript - Index{% endblock %}
 
 {% block content %}
+        <button class="annotate-icon" id="annotate-icon" title="Annotations">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            <span class="annotation-badge">0</span>
+        </button>
         <a href="theme.html" class="theme-icon" title="Customize theme">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"></path></svg>
         </a>
@@ -17,7 +21,12 @@
         </div>
         {{ pagination_html|safe }}
         <p style="color: var(--text-muted); margin-bottom: 24px;">{{ prompt_num }} prompts · {{ total_messages }} messages · {{ total_tool_calls }} tool calls · {{ total_commits }} commits · {{ total_pages }} pages</p>
-        {{ index_items_html|safe }}
+        <div class="annotation-wrapper">
+            <div class="annotation-content">
+                {{ index_items_html|safe }}
+            </div>
+            <div class="annotation-margin" id="annotation-margin"></div>
+        </div>
         {{ pagination_html|safe }}
 
         <dialog id="search-modal">
@@ -33,7 +42,49 @@
             <div id="search-status"></div>
             <div id="search-results"></div>
         </dialog>
+
+        <dialog id="annotation-menu">
+            <div class="annotation-menu-content">
+                <div class="annotation-menu-title">Annotations</div>
+                <div class="annotation-menu-buttons">
+                    <button type="button" class="annotation-menu-btn-start" id="annotation-start-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        Start Annotating
+                    </button>
+                    <button type="button" class="annotation-menu-btn-load" id="annotation-load-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Load Annotations
+                    </button>
+                    <button type="button" class="annotation-menu-btn-export" id="annotation-export-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Export Annotations
+                    </button>
+                    <button type="button" class="annotation-menu-btn-cancel" id="annotation-cancel-btn">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </dialog>
+
+        <dialog id="annotation-modal">
+            <div class="annotation-modal-header">
+                <span id="annotation-target-label">Annotating...</span>
+                <button id="annotation-close-btn" type="button" aria-label="Close">×</button>
+            </div>
+            <textarea id="annotation-input" placeholder="Enter annotation (Markdown supported: **bold**, *italic*, `code`, [links](url))..."></textarea>
+            <div class="annotation-modal-buttons">
+                <button id="annotation-delete-btn" type="button">Delete</button>
+                <button id="annotation-save-btn" type="button">Save</button>
+            </div>
+        </dialog>
+
+        <div class="annotation-status" id="annotation-status">
+            <span id="annotation-status-text">Annotating mode</span>
+            <button type="button" id="annotation-done-btn">Done</button>
+        </div>
+
         <script>
 {% include "search.js" %}
+{% include "annotations.js" %}
         </script>
 {%- endblock %}

@@ -4,13 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Code transcript - page 1</title>
-    <style>:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --tool-reply-bg: #fff8e1; --tool-reply-border: #ff9800; --tool-reply-text: #e65100; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; --commit-bg: #fff3e0; --commit-border: #ff9800; --commit-text: #e65100; --link-color: #1976d2; --accent-bg: #fff8e1; --accent-border: #ff9800; --accent-color: #e65100; }
+    <style>:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --tool-reply-bg: #fff8e1; --tool-reply-border: #ff9800; --tool-reply-text: #e65100; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; --commit-bg: #fff3e0; --commit-border: #ff9800; --commit-text: #e65100; --link-color: #1976d2; --accent-bg: #fff8e1; --accent-border: #ff9800; --accent-color: #e65100; --annotation-bg: #fffbeb; --annotation-border: #f59e0b; --annotation-text: #92400e; }
 .theme-icon { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); opacity: 0.7; transition: opacity 0.2s, transform 0.2s; z-index: 100; color: var(--text-muted); text-decoration: none; }
 .theme-icon:hover { opacity: 1; transform: scale(1.1); }
 
+.annotation-wrapper { display: flex; gap: 16px; }
+.annotation-content { flex: 1; min-width: 0; }
+.annotation-margin { width: 250px; flex-shrink: 0; position: relative; }
+@media (max-width: 1100px) { .annotation-margin { display: none; } }
+.annotate-icon { position: fixed; top: 16px; right: 60px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); opacity: 0.7; transition: opacity 0.2s, transform 0.2s, background 0.2s; z-index: 100; color: var(--text-muted); cursor: pointer; border: none; }
+.annotate-icon:hover { opacity: 1; transform: scale(1.1); }
+.annotate-icon.active { opacity: 1; background: var(--annotation-border); color: white; }
+.annotate-icon .annotation-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; background: var(--annotation-border); border-radius: 9px; font-size: 11px; font-weight: 600; color: white; display: none; align-items: center; justify-content: center; padding: 0 4px; }
+.annotate-icon.has-annotations .annotation-badge { display: flex; }
+.annotation-mode-active .message, .annotation-mode-active .index-item { cursor: pointer; transition: box-shadow 0.15s; }
+.annotation-mode-active .message:hover, .annotation-mode-active .index-item:hover { box-shadow: 0 0 0 2px var(--annotation-border); }
+.has-annotation { position: relative; }
+.has-annotation::before { content: ''; position: absolute; top: 0; right: -8px; width: 4px; height: 100%; background: var(--annotation-border); border-radius: 2px; }
+.annotation-bubble { position: absolute; left: 0; right: 0; background: var(--annotation-bg); border: 1px solid var(--annotation-border); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; color: var(--annotation-text); box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.annotation-bubble:hover { transform: translateX(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.annotation-bubble p { margin: 0 0 6px 0; }
+.annotation-bubble p:last-child { margin-bottom: 0; }
+.annotation-bubble code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
+.annotation-bubble strong { font-weight: 600; }
+.annotation-bubble em { font-style: italic; }
+.annotation-bubble a { color: var(--link-color); }
+.annotation-bubble-connector { position: absolute; left: -16px; top: 12px; width: 16px; height: 2px; background: var(--annotation-border); }
+#annotation-menu[open], #annotation-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; }
+#annotation-menu[open] { width: 280px; }
+#annotation-modal[open] { width: 90vw; max-width: 600px; display: flex; flex-direction: column; }
+#annotation-menu::backdrop, #annotation-modal::backdrop { background: rgba(0,0,0,0.5); }
+.annotation-menu-content { padding: 16px; }
+.annotation-menu-title { font-weight: 600; font-size: 1rem; color: var(--text-color); margin-bottom: 16px; text-align: center; }
+.annotation-menu-buttons { display: flex; flex-direction: column; gap: 8px; }
+.annotation-menu-buttons button { padding: 12px 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; border: none; text-align: left; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+.annotation-menu-buttons button svg { flex-shrink: 0; }
+.annotation-menu-btn-start { background: var(--annotation-border); color: white; }
+.annotation-menu-btn-start:hover { background: #d97706; }
+.annotation-menu-btn-load { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--assistant-border) !important; }
+.annotation-menu-btn-load:hover { background: var(--bg-color); }
+.annotation-menu-btn-cancel { background: transparent; color: var(--text-muted); }
+.annotation-menu-btn-cancel:hover { background: rgba(0,0,0,0.05); }
+.annotation-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.annotation-modal-header span { font-weight: 500; color: var(--text-color); }
+#annotation-close-btn { background: var(--text-muted); color: white; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 1.2rem; line-height: 1; }
+#annotation-close-btn:hover { background: #616161; }
+#annotation-input { width: 100%; min-height: 120px; padding: 16px; border: none; font-family: inherit; font-size: 0.95rem; resize: vertical; box-sizing: border-box; }
+#annotation-input:focus { outline: none; }
+.annotation-modal-buttons { display: flex; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 0 0 12px 12px; }
+.annotation-modal-buttons button { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; border: none; }
+#annotation-delete-btn { background: #ffebee; color: #c62828; }
+#annotation-delete-btn:hover { background: #ffcdd2; }
+#annotation-save-btn { background: var(--annotation-border); color: white; }
+#annotation-save-btn:hover { background: #d97706; }
+.annotation-status { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--annotation-border); color: white; padding: 10px 20px; border-radius: 24px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100; display: none; align-items: center; gap: 8px; }
+.annotation-status.visible { display: flex; }
+.annotation-status button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; }
+.annotation-status button:hover { background: rgba(255,255,255,0.3); }
+
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
-.container { max-width: 800px; margin: 0 auto; }
+.container { max-width: 1100px; margin: 0 auto; }
 h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
 .header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
 .header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
@@ -174,6 +228,13 @@ details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom
 </head>
 <body>
     <div class="container">
+        <button class="annotate-icon" id="annotate-icon" title="Annotations">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            <span class="annotation-badge">0</span>
+        </button>
+        <a href="theme.html" class="theme-icon" title="Customize theme">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"></path></svg>
+        </a>
         <h1><a href="index.html" style="color: inherit; text-decoration: none;">Claude Code transcript</a> - page 1/2</h1>
         
 
@@ -185,7 +246,9 @@ details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom
 <a href="page-002.html">Next &rarr;</a>
 </div>
 
-        
+        <div class="annotation-wrapper">
+            <div class="annotation-content">
+                
 <div class="message user" id="msg-2025-12-24T10-00-00-000Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2025-12-24T10-00-00-000Z" class="timestamp-link"><time datetime="2025-12-24T10:00:00.000Z" data-timestamp="2025-12-24T10:00:00.000Z">2025-12-24T10:00:00.000Z</time></a></div><div class="message-content">
 <div class="user-content"><p>Create a simple Python function to add two numbers</p></div></div></div>
 <div class="message assistant" id="msg-2025-12-24T10-00-05-000Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2025-12-24T10-00-05-000Z" class="timestamp-link"><time datetime="2025-12-24T10:00:05.000Z" data-timestamp="2025-12-24T10:00:05.000Z">2025-12-24T10:00:05.000Z</time></a></div><div class="message-content">
@@ -308,6 +371,9 @@ test_subtract - AssertionError: expected 5 but got None</pre></div><button class
 <div class="assistant-text"><p>Done! The subtract function is now working and committed.</p></div></div></div><details class="continuation"><summary>Session continuation summary</summary>
 <div class="message user" id="msg-2025-12-24T10-04-00-000Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2025-12-24T10-04-00-000Z" class="timestamp-link"><time datetime="2025-12-24T10:04:00.000Z" data-timestamp="2025-12-24T10:04:00.000Z">2025-12-24T10:04:00.000Z</time></a></div><div class="message-content">
 <div class="user-content"><p>This is a session continuation summary from a previous context. The user was working on a math utilities library.</p></div></div></div></details>
+            </div>
+            <div class="annotation-margin" id="annotation-margin"></div>
+        </div>
         
 
 <div class="pagination">
@@ -318,6 +384,581 @@ test_subtract - AssertionError: expected 5 but got None</pre></div><button class
 <a href="page-002.html">Next &rarr;</a>
 </div>
 
+
+        <dialog id="annotation-menu">
+            <div class="annotation-menu-content">
+                <div class="annotation-menu-title">Annotations</div>
+                <div class="annotation-menu-buttons">
+                    <button type="button" class="annotation-menu-btn-start" id="annotation-start-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        Start Annotating
+                    </button>
+                    <button type="button" class="annotation-menu-btn-load" id="annotation-load-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Load Annotations
+                    </button>
+                    <button type="button" class="annotation-menu-btn-export" id="annotation-export-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Export Annotations
+                    </button>
+                    <button type="button" class="annotation-menu-btn-cancel" id="annotation-cancel-btn">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </dialog>
+
+        <dialog id="annotation-modal">
+            <div class="annotation-modal-header">
+                <span id="annotation-target-label">Annotating...</span>
+                <button id="annotation-close-btn" type="button" aria-label="Close">×</button>
+            </div>
+            <textarea id="annotation-input" placeholder="Enter annotation (Markdown supported: **bold**, *italic*, `code`, [links](url))..."></textarea>
+            <div class="annotation-modal-buttons">
+                <button id="annotation-delete-btn" type="button">Delete</button>
+                <button id="annotation-save-btn" type="button">Save</button>
+            </div>
+        </dialog>
+
+        <div class="annotation-status" id="annotation-status">
+            <span id="annotation-status-text">Annotating mode</span>
+            <button type="button" id="annotation-done-btn">Done</button>
+        </div>
+
+        <script>
+// Annotation system for Claude Code transcripts
+(function() {
+    // State
+    var annotationMode = false;
+    var annotations = { version: '1.0', annotations: {} };
+    var currentTargetId = null;
+    var fileHandle = null; // For File System Access API
+    var currentPage = window.location.pathname.split('/').pop() || 'index.html';
+
+    // Get localStorage key for this transcript
+    function getStorageKey() {
+        var path = window.location.pathname;
+        var dir = path.substring(0, path.lastIndexOf('/') + 1);
+        return 'annotations:' + dir;
+    }
+
+    // Auto-save annotations to localStorage
+    function autoSave() {
+        try {
+            var key = getStorageKey();
+            localStorage.setItem(key, JSON.stringify(annotations));
+        } catch (e) {
+            console.warn('Could not save to localStorage:', e);
+        }
+    }
+
+    // Elements
+    var menu = document.getElementById('annotation-menu');
+    var modal = document.getElementById('annotation-modal');
+    var input = document.getElementById('annotation-input');
+    var targetLabel = document.getElementById('annotation-target-label');
+    var closeBtn = document.getElementById('annotation-close-btn');
+    var saveBtn = document.getElementById('annotation-save-btn');
+    var deleteBtn = document.getElementById('annotation-delete-btn');
+    var annotateIcon = document.getElementById('annotate-icon');
+    var marginContainer = document.getElementById('annotation-margin');
+    var statusBar = document.getElementById('annotation-status');
+    var statusText = document.getElementById('annotation-status-text');
+    var doneBtn = document.getElementById('annotation-done-btn');
+    var startBtn = document.getElementById('annotation-start-btn');
+    var loadBtn = document.getElementById('annotation-load-btn');
+    var exportBtn = document.getElementById('annotation-export-btn');
+    var cancelBtn = document.getElementById('annotation-cancel-btn');
+    var badge = annotateIcon ? annotateIcon.querySelector('.annotation-badge') : null;
+
+    // Count annotations for current page
+    function countPageAnnotations() {
+        var count = 0;
+        for (var id in annotations.annotations) {
+            // Count all annotations (they belong to this transcript)
+            count++;
+        }
+        return count;
+    }
+
+    // Update badge display
+    function updateBadge() {
+        if (!badge || !annotateIcon) return;
+        var count = countPageAnnotations();
+        badge.textContent = count;
+        if (count > 0) {
+            annotateIcon.classList.add('has-annotations');
+        } else {
+            annotateIcon.classList.remove('has-annotations');
+        }
+    }
+
+    // Get element ID for annotation storage
+    function getAnnotationId(element) {
+        if (element.classList.contains('message') && element.id) {
+            return element.id;
+        }
+        if (element.classList.contains('index-item')) {
+            var promptNum = element.getAttribute('data-prompt-num');
+            if (promptNum) {
+                return 'index-' + promptNum;
+            }
+        }
+        return null;
+    }
+
+    // Get display label for target
+    function getTargetLabel(id) {
+        if (id.startsWith('msg-')) {
+            return 'Message: ' + id.replace('msg-', '').replace(/-/g, ':').slice(0, 19);
+        }
+        if (id.startsWith('index-')) {
+            return 'Prompt #' + id.replace('index-', '');
+        }
+        return id;
+    }
+
+    // Simple markdown to HTML parser
+    function parseMarkdown(text) {
+        if (!text) return '';
+        var html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+        html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        var paragraphs = html.split(/\n\n+/);
+        html = paragraphs.map(function(p) {
+            return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+        }).join('');
+        return html;
+    }
+
+    // Find element by annotation ID
+    function findElementById(id) {
+        if (id.startsWith('msg-')) {
+            return document.getElementById(id);
+        }
+        if (id.startsWith('index-')) {
+            var promptNum = id.replace('index-', '');
+            return document.querySelector('.index-item[data-prompt-num="' + promptNum + '"]');
+        }
+        return null;
+    }
+
+    // Create margin bubble for an annotation
+    function createBubble(id, content, element) {
+        if (!marginContainer || !element) return null;
+
+        var bubble = document.createElement('div');
+        bubble.className = 'annotation-bubble';
+        bubble.setAttribute('data-annotation-id', id);
+        bubble.innerHTML = '<div class="annotation-bubble-connector"></div>' + parseMarkdown(content);
+
+        // Position bubble relative to element
+        var wrapperRect = marginContainer.parentElement.getBoundingClientRect();
+        var elementRect = element.getBoundingClientRect();
+        var marginRect = marginContainer.getBoundingClientRect();
+
+        // Calculate top position relative to margin container
+        var topOffset = elementRect.top - wrapperRect.top;
+        bubble.style.top = topOffset + 'px';
+
+        // Click bubble to edit
+        bubble.addEventListener('click', function() {
+            if (annotationMode) {
+                openModal(id);
+            }
+        });
+
+        marginContainer.appendChild(bubble);
+
+        // Mark element as having annotation
+        element.classList.add('has-annotation');
+
+        return bubble;
+    }
+
+    // Remove all bubbles
+    function clearBubbles() {
+        if (!marginContainer) return;
+        marginContainer.innerHTML = '';
+        document.querySelectorAll('.has-annotation').forEach(function(el) {
+            el.classList.remove('has-annotation');
+        });
+    }
+
+    // Render all annotations as margin bubbles
+    function renderAnnotations() {
+        clearBubbles();
+        for (var id in annotations.annotations) {
+            var annotation = annotations.annotations[id];
+            var element = findElementById(id);
+            if (element && annotation.content) {
+                createBubble(id, annotation.content, element);
+            }
+        }
+        updateBadge();
+    }
+
+    // Reposition bubbles on scroll/resize
+    function repositionBubbles() {
+        if (!marginContainer) return;
+        var wrapperRect = marginContainer.parentElement.getBoundingClientRect();
+        var bubbles = marginContainer.querySelectorAll('.annotation-bubble');
+        bubbles.forEach(function(bubble) {
+            var id = bubble.getAttribute('data-annotation-id');
+            var element = findElementById(id);
+            if (element) {
+                var elementRect = element.getBoundingClientRect();
+                var topOffset = elementRect.top - wrapperRect.top;
+                bubble.style.top = topOffset + 'px';
+            }
+        });
+    }
+
+    // Open menu dialog
+    function openMenu() {
+        if (menu) menu.showModal();
+    }
+
+    // Close menu dialog
+    function closeMenu() {
+        if (menu) menu.close();
+    }
+
+    // Start annotation mode
+    function startAnnotating() {
+        closeMenu();
+        annotationMode = true;
+        document.body.classList.add('annotation-mode-active');
+        annotateIcon.classList.add('active');
+        statusBar.classList.add('visible');
+        updateStatusText();
+    }
+
+    // Exit annotation mode (annotations are auto-saved to localStorage on each change)
+    function finishAnnotating() {
+        annotationMode = false;
+        document.body.classList.remove('annotation-mode-active');
+        annotateIcon.classList.remove('active');
+        statusBar.classList.remove('visible');
+        // No need to prompt - annotations are auto-saved to localStorage
+    }
+
+    // Update status bar text
+    function updateStatusText() {
+        var count = countPageAnnotations();
+        statusText.textContent = count + ' annotation' + (count !== 1 ? 's' : '');
+    }
+
+    // Open modal for a target
+    function openModal(targetId) {
+        currentTargetId = targetId;
+        targetLabel.textContent = getTargetLabel(targetId);
+        var existing = annotations.annotations[targetId];
+        input.value = existing ? existing.content : '';
+        deleteBtn.style.display = existing ? 'block' : 'none';
+        modal.showModal();
+        input.focus();
+    }
+
+    // Close modal
+    function closeModal() {
+        modal.close();
+        currentTargetId = null;
+    }
+
+    // Save annotation (to memory and localStorage)
+    function saveAnnotationToMemory() {
+        var content = input.value.trim();
+        if (!currentTargetId) return;
+
+        if (!annotations.created_at) {
+            annotations.created_at = new Date().toISOString();
+        }
+
+        if (content) {
+            annotations.annotations[currentTargetId] = {
+                content: content,
+                created_at: annotations.annotations[currentTargetId]
+                    ? annotations.annotations[currentTargetId].created_at
+                    : new Date().toISOString()
+            };
+        } else {
+            delete annotations.annotations[currentTargetId];
+        }
+
+        annotations.modified_at = new Date().toISOString();
+        autoSave();
+        renderAnnotations();
+        updateStatusText();
+        closeModal();
+    }
+
+    // Delete annotation
+    function deleteAnnotation() {
+        if (!currentTargetId) return;
+        if (!confirm('Delete this annotation?')) return;
+
+        delete annotations.annotations[currentTargetId];
+        annotations.modified_at = new Date().toISOString();
+        autoSave();
+        renderAnnotations();
+        updateStatusText();
+        closeModal();
+    }
+
+    // Export annotations to file (for sharing/backup)
+    async function exportAnnotations() {
+        if (countPageAnnotations() === 0) {
+            alert('No annotations to export.');
+            return;
+        }
+
+        annotations.modified_at = new Date().toISOString();
+        var json = JSON.stringify(annotations, null, 2);
+
+        // Try File System Access API first (Chrome/Edge)
+        if ('showSaveFilePicker' in window) {
+            try {
+                var handle = await window.showSaveFilePicker({
+                    suggestedName: 'annotations.json',
+                    types: [{
+                        description: 'JSON Files',
+                        accept: { 'application/json': ['.json'] }
+                    }]
+                });
+                var writable = await handle.createWritable();
+                await writable.write(json);
+                await writable.close();
+                console.log('Annotations exported via File System Access API');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    return; // User cancelled
+                }
+                console.log('File System Access API failed, falling back to download');
+            }
+        }
+
+        // Fallback to download
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'annotations.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Load annotations from file
+    function loadAnnotationsFromFile() {
+        closeMenu();
+
+        // Try File System Access API first
+        if ('showOpenFilePicker' in window) {
+            window.showOpenFilePicker({
+                types: [{
+                    description: 'JSON Files',
+                    accept: { 'application/json': ['.json'] }
+                }]
+            }).then(async function(handles) {
+                fileHandle = handles[0];
+                var file = await fileHandle.getFile();
+                var text = await file.text();
+                processLoadedAnnotations(text);
+            }).catch(function(err) {
+                if (err.name !== 'AbortError') {
+                    // Fallback to regular file input
+                    loadWithFileInput();
+                }
+            });
+        } else {
+            loadWithFileInput();
+        }
+    }
+
+    // Fallback file input method
+    function loadWithFileInput() {
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json,application/json';
+        fileInput.onchange = function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                processLoadedAnnotations(e.target.result);
+            };
+            reader.readAsText(file);
+        };
+        fileInput.click();
+    }
+
+    // Process loaded annotations JSON
+    function processLoadedAnnotations(text) {
+        try {
+            var data = JSON.parse(text);
+            if (data.annotations) {
+                annotations = data;
+                autoSave(); // Save to localStorage
+                renderAnnotations();
+                alert('Loaded ' + countPageAnnotations() + ' annotations.');
+            } else {
+                alert('Invalid annotations file format.');
+            }
+        } catch (err) {
+            alert('Error parsing annotations file: ' + err.message);
+        }
+    }
+
+    // Auto-load annotations from localStorage (primary) or annotations.json (fallback)
+    function autoLoadAnnotations() {
+        // Try localStorage first (works on both file:// and http://)
+        try {
+            var key = getStorageKey();
+            var stored = localStorage.getItem(key);
+            if (stored) {
+                var data = JSON.parse(stored);
+                if (data.annotations) {
+                    annotations = data;
+                    renderAnnotations();
+                    console.log('Auto-loaded ' + countPageAnnotations() + ' annotations from localStorage.');
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load from localStorage:', e);
+        }
+
+        // Fall back to fetch on HTTP (for server-side annotations.json)
+        if (window.location.protocol === 'file:') return;
+        fetch('annotations.json')
+            .then(function(response) {
+                if (response.ok) return response.json();
+                throw new Error('Not found');
+            })
+            .then(function(data) {
+                if (data.annotations) {
+                    annotations = data;
+                    autoSave(); // Migrate to localStorage
+                    renderAnnotations();
+                    console.log('Auto-loaded ' + countPageAnnotations() + ' annotations from annotations.json.');
+                }
+            })
+            .catch(function() {
+                // No annotations.json found
+            });
+    }
+
+    // Handle click on annotatable elements
+    function handleAnnotatableClick(e) {
+        if (!annotationMode) return;
+
+        var target = e.target.closest('.message, .index-item');
+        if (!target) return;
+
+        // Don't trigger for clicks on links
+        if (e.target.closest('a')) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var id = getAnnotationId(target);
+        if (id) {
+            openModal(id);
+        }
+    }
+
+    // Handle icon click
+    function handleIconClick() {
+        if (annotationMode) {
+            // Already annotating - finish and save
+            finishAnnotating();
+        } else {
+            // Show menu
+            openMenu();
+        }
+    }
+
+    // Initialize
+    function init() {
+        if (!annotateIcon) return;
+
+        // Icon click handler
+        annotateIcon.addEventListener('click', handleIconClick);
+
+        // Menu handlers
+        if (startBtn) startBtn.addEventListener('click', startAnnotating);
+        if (loadBtn) loadBtn.addEventListener('click', loadAnnotationsFromFile);
+        if (exportBtn) exportBtn.addEventListener('click', function() { closeMenu(); exportAnnotations(); });
+        if (cancelBtn) cancelBtn.addEventListener('click', closeMenu);
+
+        // Menu backdrop click
+        if (menu) {
+            menu.addEventListener('click', function(e) {
+                if (e.target === menu) closeMenu();
+            });
+        }
+
+        // Done button
+        if (doneBtn) doneBtn.addEventListener('click', finishAnnotating);
+
+        // Modal handlers
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (saveBtn) saveBtn.addEventListener('click', saveAnnotationToMemory);
+        if (deleteBtn) deleteBtn.addEventListener('click', deleteAnnotation);
+
+        // Modal backdrop click
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+        }
+
+        // Click handler for annotatable elements
+        document.addEventListener('click', handleAnnotatableClick);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (modal && modal.open) closeModal();
+                else if (menu && menu.open) closeMenu();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && modal && modal.open) {
+                e.preventDefault();
+                saveAnnotationToMemory();
+            }
+        });
+
+        // Reposition bubbles on scroll/resize
+        var repositionTimeout;
+        function debouncedReposition() {
+            clearTimeout(repositionTimeout);
+            repositionTimeout = setTimeout(repositionBubbles, 50);
+        }
+        window.addEventListener('scroll', debouncedReposition);
+        window.addEventListener('resize', debouncedReposition);
+
+        // Auto-load annotations
+        autoLoadAnnotations();
+
+        // Initial badge update
+        updateBadge();
+    }
+
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+        </script>
     </div>
     <script>
 document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
