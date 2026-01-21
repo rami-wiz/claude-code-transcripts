@@ -304,7 +304,7 @@ def find_all_sessions(folder, include_agents=False):
 
 
 def generate_batch_html(
-    source_folder, output_dir, include_agents=False, progress_callback=None
+    source_folder, output_dir, include_agents=False, progress_callback=None, theme=None
 ):
     """Generate HTML archive for all sessions in a Claude projects folder.
 
@@ -319,6 +319,7 @@ def generate_batch_html(
         include_agents: Whether to include agent-* session files
         progress_callback: Optional callback(project_name, session_name, current, total)
             called after each session is processed
+        theme: Optional theme dict for styling
 
     Returns statistics dict with total_projects, total_sessions, failed_sessions, output_dir.
     """
@@ -347,7 +348,7 @@ def generate_batch_html(
 
             # Generate transcript HTML with error handling
             try:
-                generate_html(session["path"], session_dir)
+                generate_html(session["path"], session_dir, theme=theme)
                 successful_sessions += 1
             except Exception as e:
                 failed_sessions.append(
@@ -902,8 +903,10 @@ def render_message(log_type, message_json, timestamp):
     return _macros.message(role_class, role_label, msg_id, timestamp, content_html)
 
 
-CSS = """
-:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; }
+from claude_code_transcripts.theme import DEFAULT_THEME, load_theme
+
+# Static part of CSS (doesn't change with theme)
+_CSS_BODY = """
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
 .container { max-width: 800px; margin: 0 auto; }
@@ -1040,6 +1043,28 @@ details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom
 .search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
 @media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
 """
+
+
+def get_styles(theme: dict | None = None) -> str:
+    """Generate CSS with theme values.
+
+    Args:
+        theme: Optional theme dict. If None, uses DEFAULT_THEME.
+
+    Returns:
+        CSS string with theme colors applied.
+    """
+    colors = theme or DEFAULT_THEME
+    root_vars = f""":root {{ --bg-color: {colors['bg_color']}; --card-bg: {colors['card_bg']}; --user-bg: {colors['user_bg']}; --user-border: {colors['user_border']}; --assistant-bg: {colors['assistant_bg']}; --assistant-border: {colors['assistant_border']}; --thinking-bg: {colors['thinking_bg']}; --thinking-border: {colors['thinking_border']}; --thinking-text: #666; --tool-bg: {colors['tool_bg']}; --tool-border: {colors['tool_border']}; --tool-result-bg: {colors['tool_result_bg']}; --tool-error-bg: {colors['tool_error_bg']}; --text-color: {colors['text_color']}; --text-muted: {colors['text_muted']}; --code-bg: {colors['code_bg']}; --code-text: {colors['code_text']}; --commit-bg: {colors['commit_bg']}; --commit-border: {colors['commit_border']}; --commit-text: {colors['commit_text']}; --link-color: {colors['link_color']}; }}"""
+    theme_icon = """
+.theme-icon { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); opacity: 0.7; transition: opacity 0.2s, transform 0.2s; z-index: 100; color: var(--text-muted); text-decoration: none; }
+.theme-icon:hover { opacity: 1; transform: scale(1.1); }
+"""
+    return root_vars + theme_icon + _CSS_BODY
+
+
+# Default CSS for backwards compatibility
+CSS = get_styles()
 
 JS = """
 document.querySelectorAll('time[data-timestamp]').forEach(function(el) {
@@ -1226,9 +1251,30 @@ def generate_index_pagination_html(total_pages):
     return _macros.index_pagination(total_pages)
 
 
-def generate_html(json_path, output_dir, github_repo=None):
+def _generate_theme_html(output_dir, theme=None):
+    """Generate the theme editor HTML page.
+
+    Args:
+        output_dir: Directory to write theme.html to.
+        theme: Optional theme dict. If None, uses DEFAULT_THEME.
+    """
+    current_theme = theme or DEFAULT_THEME
+    theme_template = get_template("theme.html")
+    theme_content = theme_template.render(
+        theme=current_theme,
+        default_theme_json=json.dumps(DEFAULT_THEME),
+        theme_json=json.dumps(current_theme),
+    )
+    theme_path = Path(output_dir) / "theme.html"
+    theme_path.write_text(theme_content, encoding="utf-8")
+
+
+def generate_html(json_path, output_dir, github_repo=None, theme=None):
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True)
+
+    # Get CSS for the theme
+    css = get_styles(theme)
 
     # Load session file (supports both JSON and JSONL)
     data = parse_session_file(json_path)
@@ -1303,7 +1349,7 @@ def generate_html(json_path, output_dir, github_repo=None):
         pagination_html = generate_pagination_html(page_num, total_pages)
         page_template = get_template("page.html")
         page_content = page_template.render(
-            css=CSS,
+            css=css,
             js=JS,
             page_num=page_num,
             total_pages=total_pages,
@@ -1384,7 +1430,7 @@ def generate_html(json_path, output_dir, github_repo=None):
     index_pagination = generate_index_pagination_html(total_pages)
     index_template = get_template("index.html")
     index_content = index_template.render(
-        css=CSS,
+        css=css,
         js=JS,
         pagination_html=index_pagination,
         prompt_num=prompt_num,
@@ -1399,6 +1445,9 @@ def generate_html(json_path, output_dir, github_repo=None):
     print(
         f"Generated {index_path.resolve()} ({total_convs} prompts, {total_pages} pages)"
     )
+
+    # Generate theme editor page
+    _generate_theme_html(output_dir, theme)
 
 
 @click.group(cls=DefaultGroup, default="local", default_if_no_args=True)
@@ -1447,7 +1496,14 @@ def cli():
     default=10,
     help="Maximum number of sessions to show (default: 10)",
 )
-def local_cmd(output, output_auto, repo, gist, include_json, open_browser, limit):
+@click.option(
+    "--theme",
+    "theme_name",
+    help="Theme name (e.g., 'dark') or path to theme.json file.",
+)
+def local_cmd(
+    output, output_auto, repo, gist, include_json, open_browser, limit, theme_name
+):
     """Select and convert a local Claude Code session to HTML."""
     projects_folder = Path.home() / ".claude" / "projects"
 
@@ -1498,7 +1554,11 @@ def local_cmd(output, output_auto, repo, gist, include_json, open_browser, limit
         output = Path(tempfile.gettempdir()) / f"claude-session-{session_file.stem}"
 
     output = Path(output)
-    generate_html(session_file, output, github_repo=repo)
+
+    # Load theme if specified
+    theme = load_theme(theme_name) if theme_name else None
+
+    generate_html(session_file, output, github_repo=repo, theme=theme)
 
     # Show output directory
     click.echo(f"Output: {output.resolve()}")
@@ -1599,7 +1659,14 @@ def fetch_url_to_tempfile(url):
     is_flag=True,
     help="Open the generated index.html in your default browser (default if no -o specified).",
 )
-def json_cmd(json_file, output, output_auto, repo, gist, include_json, open_browser):
+@click.option(
+    "--theme",
+    "theme_name",
+    help="Theme name (e.g., 'dark') or path to theme.json file.",
+)
+def json_cmd(
+    json_file, output, output_auto, repo, gist, include_json, open_browser, theme_name
+):
     """Convert a Claude Code session JSON/JSONL file or URL to HTML."""
     # Handle URL input
     if is_url(json_file):
@@ -1629,7 +1696,11 @@ def json_cmd(json_file, output, output_auto, repo, gist, include_json, open_brow
         )
 
     output = Path(output)
-    generate_html(json_file_path, output, github_repo=repo)
+
+    # Load theme if specified
+    theme = load_theme(theme_name) if theme_name else None
+
+    generate_html(json_file_path, output, github_repo=repo, theme=theme)
 
     # Show output directory
     click.echo(f"Output: {output.resolve()}")
@@ -1702,10 +1773,15 @@ def format_session_for_display(session_data):
     return f"{session_id}  {created_at[:19] if created_at else 'N/A':19}  {title}"
 
 
-def generate_html_from_session_data(session_data, output_dir, github_repo=None):
+def generate_html_from_session_data(
+    session_data, output_dir, github_repo=None, theme=None
+):
     """Generate HTML from session data dict (instead of file path)."""
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
+
+    # Get CSS for the theme
+    css = get_styles(theme)
 
     loglines = session_data.get("loglines", [])
 
@@ -1773,7 +1849,7 @@ def generate_html_from_session_data(session_data, output_dir, github_repo=None):
         pagination_html = generate_pagination_html(page_num, total_pages)
         page_template = get_template("page.html")
         page_content = page_template.render(
-            css=CSS,
+            css=css,
             js=JS,
             page_num=page_num,
             total_pages=total_pages,
@@ -1854,7 +1930,7 @@ def generate_html_from_session_data(session_data, output_dir, github_repo=None):
     index_pagination = generate_index_pagination_html(total_pages)
     index_template = get_template("index.html")
     index_content = index_template.render(
-        css=CSS,
+        css=css,
         js=JS,
         pagination_html=index_pagination,
         prompt_num=prompt_num,
@@ -1869,6 +1945,9 @@ def generate_html_from_session_data(session_data, output_dir, github_repo=None):
     click.echo(
         f"Generated {index_path.resolve()} ({total_convs} prompts, {total_pages} pages)"
     )
+
+    # Generate theme editor page
+    _generate_theme_html(output_dir, theme)
 
 
 @cli.command("web")
@@ -1910,6 +1989,11 @@ def generate_html_from_session_data(session_data, output_dir, github_repo=None):
     is_flag=True,
     help="Open the generated index.html in your default browser (default if no -o specified).",
 )
+@click.option(
+    "--theme",
+    "theme_name",
+    help="Theme name (e.g., 'dark') or path to theme.json file.",
+)
 def web_cmd(
     session_id,
     output,
@@ -1920,6 +2004,7 @@ def web_cmd(
     gist,
     include_json,
     open_browser,
+    theme_name,
 ):
     """Select and convert a web session from the Claude API to HTML.
 
@@ -1990,8 +2075,12 @@ def web_cmd(
         output = Path(tempfile.gettempdir()) / f"claude-session-{session_id}"
 
     output = Path(output)
+
+    # Load theme if specified
+    theme = load_theme(theme_name) if theme_name else None
+
     click.echo(f"Generating HTML in {output}/...")
-    generate_html_from_session_data(session_data, output, github_repo=repo)
+    generate_html_from_session_data(session_data, output, github_repo=repo, theme=theme)
 
     # Show output directory
     click.echo(f"Output: {output.resolve()}")
@@ -2055,7 +2144,12 @@ def web_cmd(
     is_flag=True,
     help="Suppress all output except errors.",
 )
-def all_cmd(source, output, include_agents, dry_run, open_browser, quiet):
+@click.option(
+    "--theme",
+    "theme_name",
+    help="Theme name (e.g., 'dark') or path to theme.json file.",
+)
+def all_cmd(source, output, include_agents, dry_run, open_browser, quiet, theme_name):
     """Convert all local Claude Code sessions to a browsable HTML archive.
 
     Creates a directory structure with:
@@ -2115,12 +2209,16 @@ def all_cmd(source, output, include_agents, dry_run, open_browser, quiet):
         if not quiet and current % 10 == 0:
             click.echo(f"  Processed {current}/{total} sessions...")
 
+    # Load theme if specified
+    theme = load_theme(theme_name) if theme_name else None
+
     # Generate the archive using the library function
     stats = generate_batch_html(
         source,
         output,
         include_agents=include_agents,
         progress_callback=on_progress,
+        theme=theme,
     )
 
     # Report any failures

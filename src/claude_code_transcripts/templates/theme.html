@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme Editor - Claude Code Transcript</title>
+    <style>
+        :root {
+            --bg-color: {{ theme.bg_color }};
+            --card-bg: {{ theme.card_bg }};
+            --user-bg: {{ theme.user_bg }};
+            --user-border: {{ theme.user_border }};
+            --assistant-bg: {{ theme.assistant_bg }};
+            --assistant-border: {{ theme.assistant_border }};
+            --thinking-bg: {{ theme.thinking_bg }};
+            --thinking-border: {{ theme.thinking_border }};
+            --tool-bg: {{ theme.tool_bg }};
+            --tool-border: {{ theme.tool_border }};
+            --tool-result-bg: {{ theme.tool_result_bg }};
+            --tool-error-bg: {{ theme.tool_error_bg }};
+            --text-color: {{ theme.text_color }};
+            --text-muted: {{ theme.text_muted }};
+            --code-bg: {{ theme.code_bg }};
+            --code-text: {{ theme.code_text }};
+            --commit-bg: {{ theme.commit_bg }};
+            --commit-border: {{ theme.commit_border }};
+            --commit-text: {{ theme.commit_text }};
+            --link-color: {{ theme.link_color }};
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 1.5rem; margin-bottom: 8px; }
+        .subtitle { color: var(--text-muted); margin-bottom: 24px; }
+
+        .editor-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 900px) {
+            .editor-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .editor-panel, .preview-panel {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--user-border);
+        }
+
+        .color-section {
+            margin-bottom: 20px;
+        }
+        .color-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .color-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .color-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .color-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-picker {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-picker::-webkit-color-swatch { border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); }
+        .color-hex {
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border: 1px solid rgba(0,0,0,0.15);
+            border-radius: 4px;
+            width: 80px;
+            background: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--user-border);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: rgba(0,0,0,0.08);
+            color: var(--text-color);
+        }
+        .btn-secondary:hover { background: rgba(0,0,0,0.12); }
+
+        /* Preview styles - match main transcript styles */
+        .preview-content { margin-top: 16px; }
+        .message { margin-bottom: 12px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
+        .message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
+        .message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+        .message-header { display: flex; justify-content: space-between; padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; }
+        .role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .user .role-label { color: var(--user-border); }
+        .tool-reply .role-label { color: #e65100; }
+        time { color: var(--text-muted); font-size: 0.75rem; }
+        .message-content { padding: 12px; font-size: 0.9rem; }
+
+        .thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 0.85rem; color: #666; }
+        .thinking-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 6px; }
+
+        .tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 6px; padding: 10px; margin: 8px 0; }
+        .tool-header { font-weight: 600; color: var(--tool-border); font-size: 0.9rem; }
+
+        .tool-result { background: var(--tool-result-bg); border-radius: 6px; padding: 10px; margin: 8px 0; }
+        .tool-result.tool-error { background: var(--tool-error-bg); }
+
+        pre { background: var(--code-bg); color: var(--code-text); padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.8rem; margin: 6px 0; }
+        code { background: rgba(0,0,0,0.08); padding: 2px 4px; border-radius: 3px; font-size: 0.85em; }
+        pre code { background: none; padding: 0; }
+
+        .commit-card { margin: 8px 0; padding: 8px 12px; background: var(--commit-bg); border-left: 4px solid var(--commit-border); border-radius: 6px; }
+        .commit-card-hash { font-family: monospace; color: var(--commit-text); font-weight: 600; }
+
+        .instructions {
+            margin-top: 24px;
+            padding: 16px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .instructions h3 { margin: 0 0 8px 0; font-size: 0.95rem; }
+        .instructions ol { margin: 0; padding-left: 20px; }
+        .instructions li { margin: 4px 0; }
+        .instructions code { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
+
+        .file-input-wrapper { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Theme Editor</h1>
+        <p class="subtitle">Customize transcript colors and export as a reusable theme</p>
+
+        <div class="editor-layout">
+            <div class="editor-panel">
+                <div class="panel-title">Color Settings</div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Background</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Page Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="bg_color" value="{{ theme.bg_color }}">
+                                <input type="text" class="color-hex" data-var="bg_color" value="{{ theme.bg_color }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Card Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="card_bg" value="{{ theme.card_bg }}">
+                                <input type="text" class="color-hex" data-var="card_bg" value="{{ theme.card_bg }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">User Messages</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="user_bg" value="{{ theme.user_bg }}">
+                                <input type="text" class="color-hex" data-var="user_bg" value="{{ theme.user_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Border</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="user_border" value="{{ theme.user_border }}">
+                                <input type="text" class="color-hex" data-var="user_border" value="{{ theme.user_border }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Assistant Messages</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="assistant_bg" value="{{ theme.assistant_bg }}">
+                                <input type="text" class="color-hex" data-var="assistant_bg" value="{{ theme.assistant_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Border</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="assistant_border" value="{{ theme.assistant_border }}">
+                                <input type="text" class="color-hex" data-var="assistant_border" value="{{ theme.assistant_border }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Thinking Blocks</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="thinking_bg" value="{{ theme.thinking_bg }}">
+                                <input type="text" class="color-hex" data-var="thinking_bg" value="{{ theme.thinking_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Border</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="thinking_border" value="{{ theme.thinking_border }}">
+                                <input type="text" class="color-hex" data-var="thinking_border" value="{{ theme.thinking_border }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Tool Usage</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Tool Call BG</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="tool_bg" value="{{ theme.tool_bg }}">
+                                <input type="text" class="color-hex" data-var="tool_bg" value="{{ theme.tool_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Tool Call Border</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="tool_border" value="{{ theme.tool_border }}">
+                                <input type="text" class="color-hex" data-var="tool_border" value="{{ theme.tool_border }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Result BG</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="tool_result_bg" value="{{ theme.tool_result_bg }}">
+                                <input type="text" class="color-hex" data-var="tool_result_bg" value="{{ theme.tool_result_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Error BG</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="tool_error_bg" value="{{ theme.tool_error_bg }}">
+                                <input type="text" class="color-hex" data-var="tool_error_bg" value="{{ theme.tool_error_bg }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Code Blocks</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="code_bg" value="{{ theme.code_bg }}">
+                                <input type="text" class="color-hex" data-var="code_bg" value="{{ theme.code_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Text</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="code_text" value="{{ theme.code_text }}">
+                                <input type="text" class="color-hex" data-var="code_text" value="{{ theme.code_text }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Commits</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="commit_bg" value="{{ theme.commit_bg }}">
+                                <input type="text" class="color-hex" data-var="commit_bg" value="{{ theme.commit_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Border</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="commit_border" value="{{ theme.commit_border }}">
+                                <input type="text" class="color-hex" data-var="commit_border" value="{{ theme.commit_border }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Text</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="commit_text" value="{{ theme.commit_text }}">
+                                <input type="text" class="color-hex" data-var="commit_text" value="{{ theme.commit_text }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Text</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Primary Text</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="text_color" value="{{ theme.text_color }}">
+                                <input type="text" class="color-hex" data-var="text_color" value="{{ theme.text_color }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Muted Text</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="text_muted" value="{{ theme.text_muted }}">
+                                <input type="text" class="color-hex" data-var="text_muted" value="{{ theme.text_muted }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Links</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="link_color" value="{{ theme.link_color }}">
+                                <input type="text" class="color-hex" data-var="link_color" value="{{ theme.link_color }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn btn-primary" id="save-btn">Save Theme</button>
+                    <button class="btn btn-secondary" id="load-btn">Load Theme</button>
+                    <button class="btn btn-secondary" id="reset-btn">Reset to Defaults</button>
+                </div>
+                <input type="file" id="file-input" accept=".json" class="file-input-wrapper">
+            </div>
+
+            <div class="preview-panel">
+                <div class="panel-title">Live Preview</div>
+                <div class="preview-content">
+                    <div class="message user">
+                        <div class="message-header">
+                            <span class="role-label">User</span>
+                            <time>12:34</time>
+                        </div>
+                        <div class="message-content">
+                            <p>Can you help me write a function to sort an array?</p>
+                        </div>
+                    </div>
+
+                    <div class="message assistant">
+                        <div class="message-header">
+                            <span class="role-label">Assistant</span>
+                            <time>12:35</time>
+                        </div>
+                        <div class="message-content">
+                            <div class="thinking">
+                                <div class="thinking-label">Thinking</div>
+                                <p>The user wants a sorting function. I'll implement quicksort for efficiency.</p>
+                            </div>
+                            <p>I'll write a quicksort implementation for you:</p>
+                            <div class="tool-use">
+                                <div class="tool-header">Write: sort.js</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="message tool-reply">
+                        <div class="message-header">
+                            <span class="role-label">Tool reply</span>
+                            <time>12:35</time>
+                        </div>
+                        <div class="message-content">
+                            <div class="tool-result">
+                                <pre><code>function quickSort(arr) {
+  if (arr.length <= 1) return arr;
+  const pivot = arr[0];
+  const left = arr.slice(1).filter(x => x < pivot);
+  const right = arr.slice(1).filter(x => x >= pivot);
+  return [...quickSort(left), pivot, ...quickSort(right)];
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="message assistant">
+                        <div class="message-header">
+                            <span class="role-label">Assistant</span>
+                            <time>12:36</time>
+                        </div>
+                        <div class="message-content">
+                            <p>I've created the sorting function. Let me commit this:</p>
+                            <div class="commit-card">
+                                <span class="commit-card-hash">abc1234</span> Add quicksort implementation
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tool-result tool-error" style="margin-top: 12px;">
+                        <pre>Error: File not found: /path/to/missing.js</pre>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <h3>How to use themes</h3>
+                    <ol>
+                        <li>Customize colors using the pickers above</li>
+                        <li>Click "Save Theme" to download a JSON file</li>
+                        <li>Save it to <code>~/.claude-code-transcripts/themes/</code></li>
+                        <li>Use with: <code>claude-code-transcripts json file.jsonl --theme your-theme-name</code></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Current theme state
+        const defaultTheme = {{ default_theme_json|safe }};
+        const currentTheme = {{ theme_json|safe }};
+
+        // CSS variable name mapping (underscore to hyphen)
+        const varMap = {
+            'bg_color': '--bg-color',
+            'card_bg': '--card-bg',
+            'user_bg': '--user-bg',
+            'user_border': '--user-border',
+            'assistant_bg': '--assistant-bg',
+            'assistant_border': '--assistant-border',
+            'thinking_bg': '--thinking-bg',
+            'thinking_border': '--thinking-border',
+            'tool_bg': '--tool-bg',
+            'tool_border': '--tool-border',
+            'tool_result_bg': '--tool-result-bg',
+            'tool_error_bg': '--tool-error-bg',
+            'text_color': '--text-color',
+            'text_muted': '--text-muted',
+            'code_bg': '--code-bg',
+            'code_text': '--code-text',
+            'commit_bg': '--commit-bg',
+            'commit_border': '--commit-border',
+            'commit_text': '--commit-text',
+            'link_color': '--link-color'
+        };
+
+        // Update CSS variable and sync inputs
+        function updateColor(varName, value) {
+            currentTheme[varName] = value;
+            document.documentElement.style.setProperty(varMap[varName], value);
+
+            // Sync all inputs with this data-var
+            document.querySelectorAll(`[data-var="${varName}"]`).forEach(input => {
+                input.value = value;
+            });
+        }
+
+        // Set up color picker and hex input listeners
+        document.querySelectorAll('.color-picker').forEach(picker => {
+            picker.addEventListener('input', (e) => {
+                updateColor(e.target.dataset.var, e.target.value);
+            });
+        });
+
+        document.querySelectorAll('.color-hex').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+                // Validate hex color
+                if (/^#[0-9a-fA-F]{6}$/.test(value) || /^#[0-9a-fA-F]{3}$/.test(value)) {
+                    updateColor(e.target.dataset.var, value);
+                }
+            });
+            input.addEventListener('blur', (e) => {
+                // On blur, expand 3-digit hex to 6-digit
+                let value = e.target.value;
+                if (/^#[0-9a-fA-F]{3}$/.test(value)) {
+                    value = '#' + value[1] + value[1] + value[2] + value[2] + value[3] + value[3];
+                    updateColor(e.target.dataset.var, value);
+                }
+            });
+        });
+
+        // Save theme
+        document.getElementById('save-btn').addEventListener('click', () => {
+            const themeName = prompt('Enter theme name:', 'my-theme');
+            if (!themeName) return;
+
+            const blob = new Blob([JSON.stringify(currentTheme, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${themeName}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Load theme
+        document.getElementById('load-btn').addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const theme = JSON.parse(event.target.result);
+                    Object.keys(theme).forEach(key => {
+                        if (varMap[key]) {
+                            updateColor(key, theme[key]);
+                        }
+                    });
+                } catch (err) {
+                    alert('Invalid theme file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset file input
+        });
+
+        // Reset to defaults
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            if (confirm('Reset all colors to defaults?')) {
+                Object.keys(defaultTheme).forEach(key => {
+                    updateColor(key, defaultTheme[key]);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
