@@ -22,6 +22,7 @@ DEFAULT_THEME = {
     "assistant_border": "#9e9e9e",
     "thinking_bg": "#fff8e1",
     "thinking_border": "#ffc107",
+    "thinking_text": "#666666",
     "tool_bg": "#f3e5f5",
     "tool_border": "#9c27b0",
     "tool_result_bg": "#e8f5e9",
@@ -37,6 +38,9 @@ DEFAULT_THEME = {
     "commit_border": "#ff9800",
     "commit_text": "#e65100",
     "link_color": "#1976d2",
+    "accent_bg": "#fff8e1",
+    "accent_border": "#ff9800",
+    "accent_color": "#e65100",
 }
 
 

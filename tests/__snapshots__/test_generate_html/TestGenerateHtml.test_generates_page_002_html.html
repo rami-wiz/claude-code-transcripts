@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Code transcript - page 2</title>
-    <style>:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --tool-reply-bg: #fff8e1; --tool-reply-border: #ff9800; --tool-reply-text: #e65100; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; --commit-bg: #fff3e0; --commit-border: #ff9800; --commit-text: #e65100; --link-color: #1976d2; }
+    <style>:root { --bg-color: #f5f5f5; --card-bg: #ffffff; --user-bg: #e3f2fd; --user-border: #1976d2; --assistant-bg: #f5f5f5; --assistant-border: #9e9e9e; --thinking-bg: #fff8e1; --thinking-border: #ffc107; --thinking-text: #666666; --tool-bg: #f3e5f5; --tool-border: #9c27b0; --tool-result-bg: #e8f5e9; --tool-error-bg: #ffebee; --tool-reply-bg: #fff8e1; --tool-reply-border: #ff9800; --tool-reply-text: #e65100; --text-color: #212121; --text-muted: #757575; --code-bg: #263238; --code-text: #aed581; --commit-bg: #fff3e0; --commit-border: #ff9800; --commit-text: #e65100; --link-color: #1976d2; --accent-bg: #fff8e1; --accent-border: #ff9800; --accent-color: #e65100; }
 .theme-icon { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); opacity: 0.7; transition: opacity 0.2s, transform 0.2s; z-index: 100; color: var(--text-muted); text-decoration: none; }
 .theme-icon:hover { opacity: 1; transform: scale(1.1); }
 
@@ -33,7 +33,7 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .message-content p { margin: 0 0 12px 0; }
 .message-content p:last-child { margin-bottom: 0; }
 .thinking { background: var(--thinking-bg); border: 1px solid var(--thinking-border); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.9rem; color: var(--thinking-text); }
-.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #f57c00; margin-bottom: 8px; }
+.thinking-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--thinking-border); margin-bottom: 8px; }
 .thinking p { margin: 8px 0; }
 .assistant-text { margin: 8px 0; }
 .tool-use { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 12px; margin: 12px 0; }
@@ -44,10 +44,10 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .tool-result.tool-error { background: var(--tool-error-bg); }
 .file-tool { border-radius: 8px; padding: 12px; margin: 12px 0; }
 .write-tool { background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); border: 1px solid #4caf50; }
-.edit-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff9800; }
+.edit-tool { background: var(--accent-bg); border: 1px solid var(--accent-border); }
 .file-tool-header { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
 .write-header { color: #2e7d32; }
-.edit-header { color: #e65100; }
+.edit-header { color: var(--accent-color); }
 .file-tool-icon { font-size: 1rem; }
 .file-tool-path { font-family: monospace; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 4px; }
 .file-tool-fullpath { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
@@ -66,8 +66,8 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
 .read-tool { background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border: 1px solid #7986cb; }
 .read-header { color: #3949ab; }
-.grep-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff8a65; }
-.grep-header { color: #e64a19; }
+.grep-tool { background: var(--accent-bg); border: 1px solid var(--accent-border); }
+.grep-header { color: var(--accent-color); }
 .grep-header code.pattern { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
 .glob-tool { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; }
 .glob-header { color: #2e7d32; }
@@ -77,7 +77,12 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .task-description { font-style: italic; color: var(--text-muted); margin: 8px 0; }
 .task-prompt summary { cursor: pointer; color: var(--text-muted); font-size: 0.85rem; }
 .task-prompt pre { margin-top: 8px; }
-.ask-user-tool { background: linear-gradient(135deg, #fff8e1 0%, #fffde7 100%); border: 1px solid #ffd54f; }
+.ask-user-tool { background: var(--accent-bg); border: 1px solid var(--accent-border); }
+.ask-user-tool .tool-header { color: var(--accent-color); }
+.ask-user-tool .question-text { color: var(--text-color); }
+.ask-user-tool .option { background: var(--card-bg); }
+.ask-user-tool .option strong { color: var(--accent-color); }
+.ask-user-tool .option-desc { color: var(--text-muted); }
 .question-block { margin-bottom: 12px; }
 .question-block:last-child { margin-bottom: 0; }
 .question-header { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
@@ -94,8 +99,8 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .todo-icon { flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
 .todo-completed .todo-icon { color: #2e7d32; background: rgba(46, 125, 50, 0.15); }
 .todo-completed .todo-content { color: #558b2f; text-decoration: line-through; }
-.todo-in-progress .todo-icon { color: #f57c00; background: rgba(245, 124, 0, 0.15); }
-.todo-in-progress .todo-content { color: #e65100; font-weight: 500; }
+.todo-in-progress .todo-icon { color: var(--accent-color); background: rgba(0,0,0,0.1); }
+.todo-in-progress .todo-content { color: var(--accent-color); font-weight: 500; }
 .todo-pending .todo-icon { color: #757575; background: rgba(0,0,0,0.05); }
 .todo-pending .todo-content { color: #616161; }
 pre { background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; word-wrap: break-word; }
@@ -131,18 +136,18 @@ details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom
 .index-item-number { font-weight: 600; color: var(--user-border); }
 .index-item-content { padding: 16px; }
 .index-item-stats { padding: 8px 16px 12px 32px; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid rgba(0,0,0,0.06); }
-.index-item-commit { margin-top: 6px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; font-size: 0.85rem; color: #e65100; }
+.index-item-commit { margin-top: 6px; padding: 4px 8px; background: var(--commit-bg); border-radius: 4px; font-size: 0.85rem; color: var(--commit-text); }
 .index-item-commit code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; margin-right: 6px; }
-.commit-card { margin: 8px 0; padding: 10px 14px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 6px; }
-.commit-card a { text-decoration: none; color: #5d4037; display: block; }
-.commit-card a:hover { color: #e65100; }
-.commit-card-hash { font-family: monospace; color: #e65100; font-weight: 600; margin-right: 8px; }
-.index-commit { margin-bottom: 12px; padding: 10px 16px; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.commit-card { margin: 8px 0; padding: 10px 14px; background: var(--commit-bg); border-left: 4px solid var(--commit-border); border-radius: 6px; }
+.commit-card a { text-decoration: none; color: var(--text-color); display: block; }
+.commit-card a:hover { color: var(--commit-text); }
+.commit-card-hash { font-family: monospace; color: var(--commit-text); font-weight: 600; margin-right: 8px; }
+.index-commit { margin-bottom: 12px; padding: 10px 16px; background: var(--commit-bg); border-left: 4px solid var(--commit-border); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 .index-commit a { display: block; text-decoration: none; color: inherit; }
-.index-commit a:hover { background: rgba(255, 152, 0, 0.1); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
+.index-commit a:hover { background: rgba(0,0,0,0.05); margin: -10px -16px; padding: 10px 16px; border-radius: 8px; }
 .index-commit-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 4px; }
-.index-commit-hash { font-family: monospace; color: #e65100; font-weight: 600; }
-.index-commit-msg { color: #5d4037; }
+.index-commit-hash { font-family: monospace; color: var(--commit-text); font-weight: 600; }
+.index-commit-msg { color: var(--text-color); }
 .index-item-long-text { margin-top: 8px; padding: 12px; background: var(--card-bg); border-radius: 8px; border-left: 3px solid var(--assistant-border); }
 .index-item-long-text .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--card-bg)); }
 .index-item-long-text-content { color: var(--text-color); }

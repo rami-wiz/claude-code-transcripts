@@ -7,6 +7,7 @@
   "assistant_border": "#97BBFF",
   "thinking_bg": "#fff0f8",
   "thinking_border": "#FF9BBE",
+  "thinking_text": "#6b4c5a",
   "tool_bg": "#fef0ff",
   "tool_border": "#C56BA4",
   "tool_result_bg": "#f0f7ff",
@@ -21,5 +22,8 @@
   "commit_bg": "#fffde6",
   "commit_border": "#FFFF00",
   "commit_text": "#01123F",
-  "link_color": "#0254EC"
+  "link_color": "#0254EC",
+  "accent_bg": "#fff0f8",
+  "accent_border": "#FF9BBE",
+  "accent_color": "#c4497a"
 }
