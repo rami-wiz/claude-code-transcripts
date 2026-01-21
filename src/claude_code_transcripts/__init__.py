@@ -916,10 +916,10 @@ h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom:
 .message { margin-bottom: 16px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
 .message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
-.message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
-.tool-reply .role-label { color: #e65100; }
+.message.tool-reply { background: var(--tool-reply-bg); border-left: 4px solid var(--tool-reply-border); }
+.tool-reply .role-label { color: var(--tool-reply-text); }
 .tool-reply .tool-result { background: transparent; padding: 0; margin: 0; }
-.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.tool-reply .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-reply-bg)); }
 .message-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(0,0,0,0.03); font-size: 0.85rem; }
 .role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .user .role-label { color: var(--user-border); }
@@ -984,7 +984,7 @@ pre code { background: none; padding: 0; }
 .truncatable.truncated .truncatable-content { max-height: 200px; overflow: hidden; }
 .truncatable.truncated::after { content: ''; position: absolute; bottom: 32px; left: 0; right: 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--card-bg)); pointer-events: none; }
 .message.user .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--user-bg)); }
-.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff8e1); }
+.message.tool-reply .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-reply-bg)); }
 .tool-use .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-bg)); }
 .tool-result .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, var(--tool-result-bg)); }
 .expand-btn { display: none; width: 100%; padding: 8px 16px; margin-top: 4px; background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); }
@@ -1055,7 +1055,7 @@ def get_styles(theme: dict | None = None) -> str:
         CSS string with theme colors applied.
     """
     colors = theme or DEFAULT_THEME
-    root_vars = f""":root {{ --bg-color: {colors['bg_color']}; --card-bg: {colors['card_bg']}; --user-bg: {colors['user_bg']}; --user-border: {colors['user_border']}; --assistant-bg: {colors['assistant_bg']}; --assistant-border: {colors['assistant_border']}; --thinking-bg: {colors['thinking_bg']}; --thinking-border: {colors['thinking_border']}; --thinking-text: #666; --tool-bg: {colors['tool_bg']}; --tool-border: {colors['tool_border']}; --tool-result-bg: {colors['tool_result_bg']}; --tool-error-bg: {colors['tool_error_bg']}; --text-color: {colors['text_color']}; --text-muted: {colors['text_muted']}; --code-bg: {colors['code_bg']}; --code-text: {colors['code_text']}; --commit-bg: {colors['commit_bg']}; --commit-border: {colors['commit_border']}; --commit-text: {colors['commit_text']}; --link-color: {colors['link_color']}; }}"""
+    root_vars = f""":root {{ --bg-color: {colors['bg_color']}; --card-bg: {colors['card_bg']}; --user-bg: {colors['user_bg']}; --user-border: {colors['user_border']}; --assistant-bg: {colors['assistant_bg']}; --assistant-border: {colors['assistant_border']}; --thinking-bg: {colors['thinking_bg']}; --thinking-border: {colors['thinking_border']}; --thinking-text: #666; --tool-bg: {colors['tool_bg']}; --tool-border: {colors['tool_border']}; --tool-result-bg: {colors['tool_result_bg']}; --tool-error-bg: {colors['tool_error_bg']}; --tool-reply-bg: {colors.get('tool_reply_bg', '#fff8e1')}; --tool-reply-border: {colors.get('tool_reply_border', '#ff9800')}; --tool-reply-text: {colors.get('tool_reply_text', '#e65100')}; --text-color: {colors['text_color']}; --text-muted: {colors['text_muted']}; --code-bg: {colors['code_bg']}; --code-text: {colors['code_text']}; --commit-bg: {colors['commit_bg']}; --commit-border: {colors['commit_border']}; --commit-text: {colors['commit_text']}; --link-color: {colors['link_color']}; }}"""
     theme_icon = """
 .theme-icon { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); opacity: 0.7; transition: opacity 0.2s, transform 0.2s; z-index: 100; color: var(--text-muted); text-decoration: none; }
 .theme-icon:hover { opacity: 1; transform: scale(1.1); }

@@ -18,6 +18,9 @@
             --tool-border: {{ theme.tool_border }};
             --tool-result-bg: {{ theme.tool_result_bg }};
             --tool-error-bg: {{ theme.tool_error_bg }};
+            --tool-reply-bg: {{ theme.tool_reply_bg }};
+            --tool-reply-border: {{ theme.tool_reply_border }};
+            --tool-reply-text: {{ theme.tool_reply_text }};
             --text-color: {{ theme.text_color }};
             --text-muted: {{ theme.text_muted }};
             --code-bg: {{ theme.code_bg }};
@@ -150,11 +153,11 @@
         .message { margin-bottom: 12px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .message.user { background: var(--user-bg); border-left: 4px solid var(--user-border); }
         .message.assistant { background: var(--card-bg); border-left: 4px solid var(--assistant-border); }
-        .message.tool-reply { background: #fff8e1; border-left: 4px solid #ff9800; }
+        .message.tool-reply { background: var(--tool-reply-bg); border-left: 4px solid var(--tool-reply-border); }
         .message-header { display: flex; justify-content: space-between; padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; }
         .role-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .user .role-label { color: var(--user-border); }
-        .tool-reply .role-label { color: #e65100; }
+        .tool-reply .role-label { color: var(--tool-reply-text); }
         time { color: var(--text-muted); font-size: 0.75rem; }
         .message-content { padding: 12px; font-size: 0.9rem; }
 
@@ -307,6 +310,33 @@
                             <div class="color-input-wrapper">
                                 <input type="color" class="color-picker" data-var="tool_error_bg" value="{{ theme.tool_error_bg }}">
                                 <input type="text" class="color-hex" data-var="tool_error_bg" value="{{ theme.tool_error_bg }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-section">
+                    <div class="color-section-title">Tool Replies</div>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label class="color-label">Background</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="tool_reply_bg" value="{{ theme.tool_reply_bg }}">
+                                <input type="text" class="color-hex" data-var="tool_reply_bg" value="{{ theme.tool_reply_bg }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Border</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="tool_reply_border" value="{{ theme.tool_reply_border }}">
+                                <input type="text" class="color-hex" data-var="tool_reply_border" value="{{ theme.tool_reply_border }}">
+                            </div>
+                        </div>
+                        <div class="color-item">
+                            <label class="color-label">Text</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" class="color-picker" data-var="tool_reply_text" value="{{ theme.tool_reply_text }}">
+                                <input type="text" class="color-hex" data-var="tool_reply_text" value="{{ theme.tool_reply_text }}">
                             </div>
                         </div>
                     </div>
@@ -492,6 +522,9 @@
             'tool_border': '--tool-border',
             'tool_result_bg': '--tool-result-bg',
             'tool_error_bg': '--tool-error-bg',
+            'tool_reply_bg': '--tool-reply-bg',
+            'tool_reply_border': '--tool-reply-border',
+            'tool_reply_text': '--tool-reply-text',
             'text_color': '--text-color',
             'text_muted': '--text-muted',
             'code_bg': '--code-bg',
