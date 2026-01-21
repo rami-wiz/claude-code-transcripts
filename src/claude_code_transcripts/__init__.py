@@ -675,6 +675,53 @@ def render_bash_tool(tool_input, tool_id):
     return _macros.bash_tool(command, description, tool_id)
 
 
+def render_read_tool(tool_input, tool_id):
+    """Render Read tool calls with file path display."""
+    file_path = tool_input.get("file_path", "")
+    filename = Path(file_path).name if file_path else "Unknown file"
+    offset = tool_input.get("offset")
+    limit = tool_input.get("limit")
+    range_info = ""
+    if offset is not None or limit is not None:
+        start = offset or 1
+        end = f"{start + limit - 1}" if limit else "..."
+        range_info = f" (lines {start}-{end})"
+    return _macros.read_tool(filename, file_path, range_info, tool_id)
+
+
+def render_grep_tool(tool_input, tool_id):
+    """Render Grep tool calls with pattern and path."""
+    pattern = tool_input.get("pattern", "")
+    path = tool_input.get("path", ".")
+    return _macros.grep_tool(pattern, path, tool_id)
+
+
+def render_glob_tool(tool_input, tool_id):
+    """Render Glob tool calls with pattern and path."""
+    pattern = tool_input.get("pattern", "")
+    path = tool_input.get("path", "")
+    return _macros.glob_tool(pattern, path, tool_id)
+
+
+def render_task_tool(tool_input, tool_id):
+    """Render Task tool calls with description and subagent type."""
+    description = tool_input.get("description", "")
+    prompt = tool_input.get("prompt", "")
+    subagent_type = tool_input.get("subagent_type", "")
+    return _macros.task_tool(description, prompt, subagent_type, tool_id)
+
+
+def render_ask_user_question_tool(tool_input, tool_id):
+    """Render AskUserQuestion tool calls with formatted questions."""
+    questions = tool_input.get("questions", [])
+    return _macros.ask_user_question(questions, tool_id)
+
+
+def render_simple_tool(icon, label, tool_id):
+    """Render a simple tool with just an icon and label."""
+    return _macros.simple_tool(icon, label, tool_id)
+
+
 def render_content_block(block):
     if not isinstance(block, dict):
         return f"<p>{html.escape(str(block))}</p>"
@@ -702,6 +749,23 @@ def render_content_block(block):
             return render_edit_tool(tool_input, tool_id)
         if tool_name == "Bash":
             return render_bash_tool(tool_input, tool_id)
+        if tool_name == "Read":
+            return render_read_tool(tool_input, tool_id)
+        if tool_name == "Grep":
+            return render_grep_tool(tool_input, tool_id)
+        if tool_name == "Glob":
+            return render_glob_tool(tool_input, tool_id)
+        if tool_name == "Task":
+            return render_task_tool(tool_input, tool_id)
+        if tool_name == "AskUserQuestion":
+            return render_ask_user_question_tool(tool_input, tool_id)
+        if tool_name == "EnterPlanMode":
+            return render_simple_tool("📋", "Enter Plan Mode", tool_id)
+        if tool_name == "ExitPlanMode":
+            return render_simple_tool("📋", "Exit Plan Mode", tool_id)
+        if tool_name == "TaskOutput":
+            task_id = tool_input.get("task_id", "unknown")
+            return render_simple_tool("⏳", f"TaskOutput: {task_id}", tool_id)
         description = tool_input.get("description", "")
         display_input = {k: v for k, v in tool_input.items() if k != "description"}
         input_json = json.dumps(display_input, indent=2, ensure_ascii=False)
@@ -963,6 +1027,28 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
 .write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
 .edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.read-tool { background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border: 1px solid #7986cb; }
+.read-header { color: #3949ab; }
+.grep-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff8a65; }
+.grep-header { color: #e64a19; }
+.grep-header code.pattern { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
+.glob-tool { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; }
+.glob-header { color: #2e7d32; }
+.glob-header code.pattern { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
+.task-tool { background: linear-gradient(135deg, #ede7f6 0%, #e1f5fe 100%); border: 1px solid #9575cd; }
+.task-type { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+.task-description { font-style: italic; color: var(--text-muted); margin: 8px 0; }
+.task-prompt summary { cursor: pointer; color: var(--text-muted); font-size: 0.85rem; }
+.task-prompt pre { margin-top: 8px; }
+.ask-user-tool { background: linear-gradient(135deg, #fff8e1 0%, #fffde7 100%); border: 1px solid #ffd54f; }
+.question-block { margin-bottom: 12px; }
+.question-block:last-child { margin-bottom: 0; }
+.question-header { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+.question-text { font-weight: 500; margin: 8px 0; }
+.question-options { display: flex; flex-direction: column; gap: 6px; }
+.option { padding: 8px; background: rgba(255,255,255,0.7); border-radius: 6px; }
+.option-desc { display: block; font-size: 0.85rem; color: var(--text-muted); }
+.simple-tool { background: var(--tool-bg); border: 1px solid var(--tool-border); }
 .todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
 .todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
 .todo-items { list-style: none; margin: 0; padding: 0; }

@@ -64,6 +64,28 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
 .write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
 .edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.read-tool { background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border: 1px solid #7986cb; }
+.read-header { color: #3949ab; }
+.grep-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff8a65; }
+.grep-header { color: #e64a19; }
+.grep-header code.pattern { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
+.glob-tool { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; }
+.glob-header { color: #2e7d32; }
+.glob-header code.pattern { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
+.task-tool { background: linear-gradient(135deg, #ede7f6 0%, #e1f5fe 100%); border: 1px solid #9575cd; }
+.task-type { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+.task-description { font-style: italic; color: var(--text-muted); margin: 8px 0; }
+.task-prompt summary { cursor: pointer; color: var(--text-muted); font-size: 0.85rem; }
+.task-prompt pre { margin-top: 8px; }
+.ask-user-tool { background: linear-gradient(135deg, #fff8e1 0%, #fffde7 100%); border: 1px solid #ffd54f; }
+.question-block { margin-bottom: 12px; }
+.question-block:last-child { margin-bottom: 0; }
+.question-header { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+.question-text { font-weight: 500; margin: 8px 0; }
+.question-options { display: flex; flex-direction: column; gap: 6px; }
+.option { padding: 8px; background: rgba(255,255,255,0.7); border-radius: 6px; }
+.option-desc { display: block; font-size: 0.85rem; color: var(--text-muted); }
+.simple-tool { background: var(--tool-bg); border: 1px solid var(--tool-border); }
 .todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
 .todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
 .todo-items { list-style: none; margin: 0; padding: 0; }

@@ -64,6 +64,28 @@ time { color: var(--text-muted); font-size: 0.8rem; }
 .edit-replace-all { font-size: 0.75rem; font-weight: normal; color: var(--text-muted); }
 .write-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #e6f4ea); }
 .edit-tool .truncatable.truncated::after { background: linear-gradient(to bottom, transparent, #fff0e5); }
+.read-tool { background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border: 1px solid #7986cb; }
+.read-header { color: #3949ab; }
+.grep-tool { background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%); border: 1px solid #ff8a65; }
+.grep-header { color: #e64a19; }
+.grep-header code.pattern { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
+.glob-tool { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; }
+.glob-header { color: #2e7d32; }
+.glob-header code.pattern { background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; }
+.task-tool { background: linear-gradient(135deg, #ede7f6 0%, #e1f5fe 100%); border: 1px solid #9575cd; }
+.task-type { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+.task-description { font-style: italic; color: var(--text-muted); margin: 8px 0; }
+.task-prompt summary { cursor: pointer; color: var(--text-muted); font-size: 0.85rem; }
+.task-prompt pre { margin-top: 8px; }
+.ask-user-tool { background: linear-gradient(135deg, #fff8e1 0%, #fffde7 100%); border: 1px solid #ffd54f; }
+.question-block { margin-bottom: 12px; }
+.question-block:last-child { margin-bottom: 0; }
+.question-header { font-size: 0.8rem; background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+.question-text { font-weight: 500; margin: 8px 0; }
+.question-options { display: flex; flex-direction: column; gap: 6px; }
+.option { padding: 8px; background: rgba(255,255,255,0.7); border-radius: 6px; }
+.option-desc { display: block; font-size: 0.85rem; color: var(--text-muted); }
+.simple-tool { background: var(--tool-bg); border: 1px solid var(--tool-border); }
 .todo-list { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border: 1px solid #81c784; border-radius: 8px; padding: 12px; margin: 12px 0; }
 .todo-header { font-weight: 600; color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
 .todo-items { list-style: none; margin: 0; padding: 0; }
@@ -212,10 +234,10 @@ To github.com:example/project.git
 <div class="message user" id="msg-2025-12-24T10-01-00-000Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2025-12-24T10-01-00-000Z" class="timestamp-link"><time datetime="2025-12-24T10:01:00.000Z" data-timestamp="2025-12-24T10:01:00.000Z">2025-12-24T10:01:00.000Z</time></a></div><div class="message-content">
 <div class="user-content"><p>Now edit the file to add a subtract function</p></div></div></div>
 <div class="message assistant" id="msg-2025-12-24T10-01-05-000Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2025-12-24T10-01-05-000Z" class="timestamp-link"><time datetime="2025-12-24T10:01:05.000Z" data-timestamp="2025-12-24T10:01:05.000Z">2025-12-24T10:01:05.000Z</time></a></div><div class="message-content">
-<div class="tool-use" data-tool-id="toolu_glob_001"><div class="tool-header"><span class="tool-icon">⚙</span> Glob</div><div class="truncatable"><div class="truncatable-content"><pre class="json">{
-  &#34;pattern&#34;: &#34;**/*.py&#34;,
-  &#34;path&#34;: &#34;/project&#34;
-}</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="file-tool glob-tool" data-tool-id="toolu_glob_001">
+<div class="file-tool-header glob-header"><span class="file-tool-icon">📁</span> Glob <code class="pattern">**/*.py</code></div>
+<div class="file-tool-fullpath">in /project</div>
+</div></div></div>
 <div class="message tool-reply" id="msg-2025-12-24T10-01-10-000Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2025-12-24T10-01-10-000Z" class="timestamp-link"><time datetime="2025-12-24T10:01:10.000Z" data-timestamp="2025-12-24T10:01:10.000Z">2025-12-24T10:01:10.000Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>/project/math_utils.py
 /project/tests/test_math.py</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
 <div class="message assistant" id="msg-2025-12-24T10-01-15-000Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2025-12-24T10-01-15-000Z" class="timestamp-link"><time datetime="2025-12-24T10:01:15.000Z" data-timestamp="2025-12-24T10:01:15.000Z">2025-12-24T10:01:15.000Z</time></a></div><div class="message-content"><div class="file-tool edit-tool" data-tool-id="toolu_edit_001">
@@ -236,11 +258,10 @@ def subtract(a: int, b: int) -&gt; int:
 <div class="message tool-reply" id="msg-2025-12-24T10-01-20-000Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2025-12-24T10-01-20-000Z" class="timestamp-link"><time datetime="2025-12-24T10:01:20.000Z" data-timestamp="2025-12-24T10:01:20.000Z">2025-12-24T10:01:20.000Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>File edited successfully</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
 <div class="message assistant" id="msg-2025-12-24T10-01-25-000Z"><div class="message-header"><span class="role-label">Assistant</span><a href="#msg-2025-12-24T10-01-25-000Z" class="timestamp-link"><time datetime="2025-12-24T10:01:25.000Z" data-timestamp="2025-12-24T10:01:25.000Z">2025-12-24T10:01:25.000Z</time></a></div><div class="message-content">
 <div class="assistant-text"><p>Added the subtract function. Let me verify with grep.</p></div>
-<div class="tool-use" data-tool-id="toolu_grep_001"><div class="tool-header"><span class="tool-icon">⚙</span> Grep</div><div class="truncatable"><div class="truncatable-content"><pre class="json">{
-  &#34;pattern&#34;: &#34;def subtract&#34;,
-  &#34;path&#34;: &#34;/project&#34;,
-  &#34;output_mode&#34;: &#34;content&#34;
-}</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
+<div class="file-tool grep-tool" data-tool-id="toolu_grep_001">
+<div class="file-tool-header grep-header"><span class="file-tool-icon">🔍</span> Grep <code class="pattern">def subtract</code></div>
+<div class="file-tool-fullpath">in /project</div>
+</div></div></div>
 <div class="message tool-reply" id="msg-2025-12-24T10-01-30-000Z"><div class="message-header"><span class="role-label">Tool reply</span><a href="#msg-2025-12-24T10-01-30-000Z" class="timestamp-link"><time datetime="2025-12-24T10:01:30.000Z" data-timestamp="2025-12-24T10:01:30.000Z">2025-12-24T10:01:30.000Z</time></a></div><div class="message-content"><div class="tool-result"><div class="truncatable"><div class="truncatable-content"><pre>/project/math_utils.py:6:def subtract(a: int, b: int) -&gt; int:</pre></div><button class="expand-btn">Show more</button></div></div></div></div>
 <div class="message user" id="msg-2025-12-24T10-02-00-000Z"><div class="message-header"><span class="role-label">User</span><a href="#msg-2025-12-24T10-02-00-000Z" class="timestamp-link"><time datetime="2025-12-24T10:02:00.000Z" data-timestamp="2025-12-24T10:02:00.000Z">2025-12-24T10:02:00.000Z</time></a></div><div class="message-content">
 <div class="user-content"><p>Run the tests again</p></div></div></div>

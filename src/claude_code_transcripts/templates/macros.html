@@ -101,6 +101,67 @@
 </div>
 {%- endmacro %}
 
+{# Read tool #}
+{% macro read_tool(filename, file_path, range_info, tool_id) %}
+<div class="file-tool read-tool" data-tool-id="{{ tool_id }}">
+<div class="file-tool-header read-header"><span class="file-tool-icon">📖</span> Read <span class="file-tool-path">{{ filename }}</span></div>
+<div class="file-tool-fullpath">{{ file_path }}{{ range_info }}</div>
+</div>
+{%- endmacro %}
+
+{# Grep tool #}
+{% macro grep_tool(pattern, path, tool_id) %}
+<div class="file-tool grep-tool" data-tool-id="{{ tool_id }}">
+<div class="file-tool-header grep-header"><span class="file-tool-icon">🔍</span> Grep <code class="pattern">{{ pattern }}</code></div>
+<div class="file-tool-fullpath">in {{ path if path else '.' }}</div>
+</div>
+{%- endmacro %}
+
+{# Glob tool #}
+{% macro glob_tool(pattern, path, tool_id) %}
+<div class="file-tool glob-tool" data-tool-id="{{ tool_id }}">
+<div class="file-tool-header glob-header"><span class="file-tool-icon">📁</span> Glob <code class="pattern">{{ pattern }}</code></div>
+{%- if path %}
+<div class="file-tool-fullpath">in {{ path }}</div>
+{%- endif %}
+</div>
+{%- endmacro %}
+
+{# Task tool #}
+{% macro task_tool(description, prompt, subagent_type, tool_id) %}
+<div class="tool-use task-tool" data-tool-id="{{ tool_id }}">
+<div class="tool-header"><span class="tool-icon">⚙</span> Task{% if subagent_type %} <span class="task-type">{{ subagent_type }}</span>{% endif %}</div>
+<div class="task-description">{{ description }}</div>
+<details class="task-prompt"><summary>View prompt</summary><pre>{{ prompt }}</pre></details>
+</div>
+{%- endmacro %}
+
+{# Ask user question tool #}
+{% macro ask_user_question(questions, tool_id) %}
+<div class="tool-use ask-user-tool" data-tool-id="{{ tool_id }}">
+{%- for question in questions %}
+<div class="question-block">
+<div class="tool-header"><span class="tool-icon">❓</span> Question{% if question.header %} <span class="question-header">{{ question.header }}</span>{% endif %}</div>
+<div class="question-text">{{ question.question }}</div>
+{%- if question.options %}
+<div class="question-options">
+{%- for option in question.options %}
+<div class="option"><strong>{{ option.label }}</strong>{% if option.description %}<span class="option-desc">{{ option.description }}</span>{% endif %}</div>
+{%- endfor %}
+</div>
+{%- endif %}
+</div>
+{%- endfor %}
+</div>
+{%- endmacro %}
+
+{# Simple tool (EnterPlanMode, ExitPlanMode, TaskOutput, etc.) #}
+{% macro simple_tool(icon, label, tool_id) %}
+<div class="tool-use simple-tool" data-tool-id="{{ tool_id }}">
+<div class="tool-header"><span class="tool-icon">{{ icon }}</span> {{ label }}</div>
+</div>
+{%- endmacro %}
+
 {# Generic tool use - input_json is pre-formatted so needs |safe #}
 {% macro tool_use(tool_name, description, input_json, tool_id) %}
 <div class="tool-use" data-tool-id="{{ tool_id }}"><div class="tool-header"><span class="tool-icon">⚙</span> {{ tool_name }}</div>
