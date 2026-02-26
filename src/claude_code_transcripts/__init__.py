@@ -304,7 +304,12 @@ def find_all_sessions(folder, include_agents=False):
 
 
 def generate_batch_html(
-    source_folder, output_dir, include_agents=False, progress_callback=None, theme=None
+    source_folder=None,
+    output_dir=None,
+    include_agents=False,
+    progress_callback=None,
+    theme=None,
+    projects=None,
 ):
     """Generate HTML archive for all sessions in a Claude projects folder.
 
@@ -314,21 +319,24 @@ def generate_batch_html(
     - Per-session directories with transcript pages
 
     Args:
-        source_folder: Path to the Claude projects folder
+        source_folder: Path to the Claude projects folder (ignored if projects provided)
         output_dir: Path for output archive
-        include_agents: Whether to include agent-* session files
+        include_agents: Whether to include agent-* session files (ignored if projects provided)
         progress_callback: Optional callback(project_name, session_name, current, total)
             called after each session is processed
         theme: Optional theme dict for styling
+        projects: Optional pre-built list of projects (from find_all_sessions).
+            If provided, source_folder and include_agents are ignored.
 
     Returns statistics dict with total_projects, total_sessions, failed_sessions, output_dir.
     """
-    source_folder = Path(source_folder)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Find all sessions
-    projects = find_all_sessions(source_folder, include_agents=include_agents)
+    # Find all sessions (unless pre-built projects provided)
+    if projects is None:
+        source_folder = Path(source_folder)
+        projects = find_all_sessions(source_folder, include_agents=include_agents)
 
     # Calculate total for progress tracking
     total_session_count = sum(len(p["sessions"]) for p in projects)
@@ -2443,7 +2451,8 @@ def web_cmd(
     "-s",
     "--source",
     type=click.Path(exists=True),
-    help="Source directory containing Claude projects (default: ~/.claude/projects).",
+    multiple=True,
+    help="Source directory containing Claude projects. Can be specified multiple times (default: ~/.claude/projects).",
 )
 @click.option(
     "-o",
@@ -2487,21 +2496,25 @@ def all_cmd(source, output, include_agents, dry_run, open_browser, quiet, theme_
     - Per-project pages listing sessions
     - Individual session transcripts
     """
-    # Default source folder
-    if source is None:
-        source = Path.home() / ".claude" / "projects"
+    # Default source folder(s)
+    if not source:
+        sources = [Path.home() / ".claude" / "projects"]
     else:
-        source = Path(source)
+        sources = [Path(s) for s in source]
 
-    if not source.exists():
-        raise click.ClickException(f"Source directory not found: {source}")
+    # Validate all sources exist
+    for src in sources:
+        if not src.exists():
+            raise click.ClickException(f"Source directory not found: {src}")
 
     output = Path(output)
 
-    if not quiet:
-        click.echo(f"Scanning {source}...")
-
-    projects = find_all_sessions(source, include_agents=include_agents)
+    # Collect projects from all sources
+    projects = []
+    for src in sources:
+        if not quiet:
+            click.echo(f"Scanning {src}...")
+        projects.extend(find_all_sessions(src, include_agents=include_agents))
 
     if not projects:
         if not quiet:
@@ -2544,11 +2557,10 @@ def all_cmd(source, output, include_agents, dry_run, open_browser, quiet, theme_
 
     # Generate the archive using the library function
     stats = generate_batch_html(
-        source,
-        output,
-        include_agents=include_agents,
+        output_dir=output,
         progress_callback=on_progress,
         theme=theme,
+        projects=projects,
     )
 
     # Report any failures

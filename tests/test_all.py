@@ -416,6 +416,52 @@ class TestAllCommand:
         # Should not create any files
         assert not (output_dir / "index.html").exists()
 
+    def test_all_multiple_sources(self, output_dir):
+        """Test --source can be specified multiple times."""
+        import tempfile
+
+        with (
+            tempfile.TemporaryDirectory() as tmpdir1,
+            tempfile.TemporaryDirectory() as tmpdir2,
+        ):
+            # Create project in first source
+            source1 = Path(tmpdir1)
+            project1 = source1 / "-home-user-projects-alpha"
+            project1.mkdir(parents=True)
+            (project1 / "session1.jsonl").write_text(
+                '{"type": "user", "timestamp": "2025-01-01T10:00:00.000Z", "message": {"role": "user", "content": "From source 1"}}\n'
+            )
+
+            # Create project in second source
+            source2 = Path(tmpdir2)
+            project2 = source2 / "-home-user-projects-beta"
+            project2.mkdir(parents=True)
+            (project2 / "session2.jsonl").write_text(
+                '{"type": "user", "timestamp": "2025-01-02T10:00:00.000Z", "message": {"role": "user", "content": "From source 2"}}\n'
+            )
+
+            runner = CliRunner()
+            result = runner.invoke(
+                cli,
+                [
+                    "all",
+                    "--source",
+                    str(source1),
+                    "--source",
+                    str(source2),
+                    "--output",
+                    str(output_dir),
+                ],
+            )
+
+            assert result.exit_code == 0
+            # Both sources should be scanned
+            assert str(source1) in result.output
+            assert str(source2) in result.output
+            # Both projects should be in the archive
+            assert (output_dir / "alpha").exists()
+            assert (output_dir / "beta").exists()
+
 
 class TestJsonCommandWithUrl:
     """Tests for the json command with URL support."""
