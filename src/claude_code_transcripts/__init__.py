@@ -373,6 +373,9 @@ def generate_batch_html(
     # Generate master index
     _generate_master_index(projects, output_dir)
 
+    # Generate search index
+    _build_search_index(projects, output_dir)
+
     return {
         "total_projects": len(projects),
         "total_sessions": successful_sessions,
@@ -498,6 +501,166 @@ def _parse_jsonl_file(filepath):
                 continue
 
     return {"loglines": loglines}
+
+
+def _extract_session_search_content(
+    filepath, max_prompts=20, max_responses=10, max_text_len=500
+):
+    """Extract searchable content from a session file for the search index.
+
+    Args:
+        filepath: Path to the session file
+        max_prompts: Maximum number of user prompts to extract
+        max_responses: Maximum number of assistant responses to extract
+        max_text_len: Maximum length for each text snippet
+
+    Returns:
+        A dict with keys: prompts, responses, tools, files
+    """
+    filepath = Path(filepath)
+    result = {"prompts": [], "responses": [], "tools": [], "files": []}
+
+    if not filepath.exists():
+        return result
+
+    try:
+        data = parse_session_file(filepath)
+        loglines = data.get("loglines", [])
+
+        seen_tools = set()
+        seen_files = set()
+
+        for entry in loglines:
+            entry_type = entry.get("type")
+            message = entry.get("message", {})
+            content = message.get("content", [])
+
+            if entry_type == "user" and len(result["prompts"]) < max_prompts:
+                # Extract user prompt text
+                text = extract_text_from_content(content)
+                if text and not text.startswith("<"):  # Skip meta/system messages
+                    truncated = (
+                        text[:max_text_len] if len(text) > max_text_len else text
+                    )
+                    result["prompts"].append(truncated)
+
+            elif entry_type == "assistant":
+                # Process content blocks
+                if isinstance(content, list):
+                    for block in content:
+                        if not isinstance(block, dict):
+                            continue
+
+                        block_type = block.get("type")
+
+                        # Extract tool names
+                        if block_type == "tool_use":
+                            tool_name = block.get("name", "")
+                            if tool_name and tool_name not in seen_tools:
+                                seen_tools.add(tool_name)
+                                result["tools"].append(tool_name)
+
+                            # Extract file paths from file-related tools
+                            tool_input = block.get("input", {})
+                            if tool_name in ("Write", "Edit", "Read"):
+                                file_path = tool_input.get("file_path", "")
+                                if file_path:
+                                    # Extract last 2 path components
+                                    parts = Path(file_path).parts
+                                    short_path = (
+                                        "/".join(parts[-2:])
+                                        if len(parts) >= 2
+                                        else file_path
+                                    )
+                                    if short_path not in seen_files:
+                                        seen_files.add(short_path)
+                                        result["files"].append(short_path)
+
+                        # Extract assistant text responses
+                        elif (
+                            block_type == "text"
+                            and len(result["responses"]) < max_responses
+                        ):
+                            text = block.get("text", "")
+                            if text:
+                                truncated = (
+                                    text[:max_text_len]
+                                    if len(text) > max_text_len
+                                    else text
+                                )
+                                result["responses"].append(truncated)
+
+    except Exception:
+        # Return empty result on any parsing error
+        pass
+
+    return result
+
+
+def _build_search_index(projects, output_dir):
+    """Build search-index.json for cross-session search.
+
+    Args:
+        projects: List of project dicts from find_all_sessions()
+        output_dir: Output directory path
+
+    Creates a search-index.json file with structure:
+    {
+        "version": 1,
+        "generated": "ISO timestamp",
+        "projects": [
+            {
+                "name": "project-name",
+                "sessions": [
+                    {
+                        "id": "session-id",
+                        "path": "project-name/session-id/index.html",
+                        "date": "YYYY-MM-DD",
+                        "summary": "...",
+                        "content": { prompts, responses, tools, files }
+                    }
+                ]
+            }
+        ]
+    }
+    """
+    output_dir = Path(output_dir)
+
+    index = {
+        "version": 1,
+        "generated": datetime.now().astimezone().isoformat(),
+        "projects": [],
+    }
+
+    for project in projects:
+        project_data = {
+            "name": project["name"],
+            "sessions": [],
+        }
+
+        for session in project["sessions"]:
+            session_path = session["path"]
+            session_id = session_path.stem
+            mod_time = datetime.fromtimestamp(session["mtime"])
+
+            # Extract searchable content from session file
+            content = _extract_session_search_content(session_path)
+
+            session_data = {
+                "id": session_id,
+                "path": f"{project['name']}/{session_id}/index.html",
+                "date": mod_time.strftime("%Y-%m-%d"),
+                "summary": session.get("summary", ""),
+                "content": content,
+            }
+
+            project_data["sessions"].append(session_data)
+
+        index["projects"].append(project_data)
+
+    # Write the index file
+    index_path = output_dir / "search-index.json"
+    index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
 
 
 class CredentialsError(Exception):
@@ -973,7 +1136,7 @@ from claude_code_transcripts.theme import DEFAULT_THEME, load_theme
 _CSS_BODY = """
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 16px; line-height: 1.6; }
-.container { max-width: 800px; margin: 0 auto; }
+.container { max-width: 1100px; margin: 0 auto; }
 h1 { font-size: 1.5rem; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--user-border); }
 .header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--user-border); padding-bottom: 8px; margin-bottom: 24px; }
 .header-row h1 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; flex: 1; min-width: 200px; }
@@ -1132,7 +1295,28 @@ details.continuation[open] summary { border-radius: 12px 12px 0 0; margin-bottom
 .search-result-page { padding: 6px 12px; background: rgba(0,0,0,0.03); font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
 .search-result-content { padding: 12px; }
 .search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
-@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } }
+#archive-search-box { display: none; align-items: center; gap: 8px; }
+#archive-search-box input { padding: 6px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; width: 180px; background: var(--bg-color); color: var(--text-color); }
+#archive-search-box button, #archive-modal-search-btn, #archive-modal-close-btn { background: var(--user-border); color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#archive-search-box button:hover, #archive-modal-search-btn:hover { background: #1565c0; }
+#archive-modal-close-btn { background: var(--text-muted); margin-left: 8px; }
+#archive-modal-close-btn:hover { background: #616161; }
+#archive-search-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; width: 90vw; max-width: 900px; height: 80vh; max-height: 80vh; display: flex; flex-direction: column; background: var(--bg-color); }
+#archive-search-modal::backdrop { background: rgba(0,0,0,0.5); }
+#archive-search-modal .search-modal-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+#archive-search-modal .search-modal-header input { flex: 1; padding: 8px 12px; border: 1px solid var(--assistant-border); border-radius: 6px; font-size: 16px; background: var(--bg-color); color: var(--text-color); }
+#archive-search-status { padding: 8px 16px; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); }
+#archive-search-results { flex: 1; overflow-y: auto; padding: 16px; }
+.archive-search-result { margin-bottom: 16px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--card-bg); }
+.archive-search-result a { display: block; text-decoration: none; color: inherit; padding: 12px; }
+.archive-search-result a:hover { background: rgba(25, 118, 210, 0.05); }
+.search-result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.search-result-project { font-weight: 600; color: var(--user-border); }
+.search-result-date { font-size: 0.85rem; color: var(--text-muted); }
+.search-result-context { margin-top: 4px; font-size: 0.9rem; color: var(--text-color); }
+.search-result-label { font-weight: 500; color: var(--text-muted); }
+.archive-search-result mark { background: #fff59d; padding: 1px 2px; border-radius: 2px; }
+@media (max-width: 600px) { body { padding: 8px; } .message, .index-item { border-radius: 8px; } .message-content, .index-item-content { padding: 12px; } pre { font-size: 0.8rem; padding: 8px; } #search-box input { width: 120px; } #search-modal[open] { width: 95vw; height: 90vh; } #archive-search-box input { width: 120px; } #archive-search-modal[open] { width: 95vw; height: 90vh; } }
 """
 
 
@@ -1146,12 +1330,67 @@ def get_styles(theme: dict | None = None) -> str:
         CSS string with theme colors applied.
     """
     colors = theme or DEFAULT_THEME
-    root_vars = f""":root {{ --bg-color: {colors['bg_color']}; --card-bg: {colors['card_bg']}; --user-bg: {colors['user_bg']}; --user-border: {colors['user_border']}; --assistant-bg: {colors['assistant_bg']}; --assistant-border: {colors['assistant_border']}; --thinking-bg: {colors['thinking_bg']}; --thinking-border: {colors['thinking_border']}; --thinking-text: {colors.get('thinking_text', '#666666')}; --tool-bg: {colors['tool_bg']}; --tool-border: {colors['tool_border']}; --tool-result-bg: {colors['tool_result_bg']}; --tool-error-bg: {colors['tool_error_bg']}; --tool-reply-bg: {colors.get('tool_reply_bg', '#fff8e1')}; --tool-reply-border: {colors.get('tool_reply_border', '#ff9800')}; --tool-reply-text: {colors.get('tool_reply_text', '#e65100')}; --text-color: {colors['text_color']}; --text-muted: {colors['text_muted']}; --code-bg: {colors['code_bg']}; --code-text: {colors['code_text']}; --commit-bg: {colors['commit_bg']}; --commit-border: {colors['commit_border']}; --commit-text: {colors['commit_text']}; --link-color: {colors['link_color']}; --accent-bg: {colors.get('accent_bg', '#fff8e1')}; --accent-border: {colors.get('accent_border', '#ff9800')}; --accent-color: {colors.get('accent_color', '#e65100')}; }}"""
+    root_vars = f""":root {{ --bg-color: {colors['bg_color']}; --card-bg: {colors['card_bg']}; --user-bg: {colors['user_bg']}; --user-border: {colors['user_border']}; --assistant-bg: {colors['assistant_bg']}; --assistant-border: {colors['assistant_border']}; --thinking-bg: {colors['thinking_bg']}; --thinking-border: {colors['thinking_border']}; --thinking-text: {colors.get('thinking_text', '#666666')}; --tool-bg: {colors['tool_bg']}; --tool-border: {colors['tool_border']}; --tool-result-bg: {colors['tool_result_bg']}; --tool-error-bg: {colors['tool_error_bg']}; --tool-reply-bg: {colors.get('tool_reply_bg', '#fff8e1')}; --tool-reply-border: {colors.get('tool_reply_border', '#ff9800')}; --tool-reply-text: {colors.get('tool_reply_text', '#e65100')}; --text-color: {colors['text_color']}; --text-muted: {colors['text_muted']}; --code-bg: {colors['code_bg']}; --code-text: {colors['code_text']}; --commit-bg: {colors['commit_bg']}; --commit-border: {colors['commit_border']}; --commit-text: {colors['commit_text']}; --link-color: {colors['link_color']}; --accent-bg: {colors.get('accent_bg', '#fff8e1')}; --accent-border: {colors.get('accent_border', '#ff9800')}; --accent-color: {colors.get('accent_color', '#e65100')}; --annotation-bg: {colors.get('annotation_bg', '#fffbeb')}; --annotation-border: {colors.get('annotation_border', '#f59e0b')}; --annotation-text: {colors.get('annotation_text', '#92400e')}; }}"""
     theme_icon = """
 .theme-icon { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); opacity: 0.7; transition: opacity 0.2s, transform 0.2s; z-index: 100; color: var(--text-muted); text-decoration: none; }
 .theme-icon:hover { opacity: 1; transform: scale(1.1); }
 """
-    return root_vars + theme_icon + _CSS_BODY
+    annotation_css = """
+.annotation-wrapper { display: flex; gap: 16px; }
+.annotation-content { flex: 1; min-width: 0; }
+.annotation-margin { width: 250px; flex-shrink: 0; position: relative; }
+@media (max-width: 1100px) { .annotation-margin { display: none; } }
+.annotate-icon { position: fixed; top: 16px; right: 60px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); opacity: 0.7; transition: opacity 0.2s, transform 0.2s, background 0.2s; z-index: 100; color: var(--text-muted); cursor: pointer; border: none; }
+.annotate-icon:hover { opacity: 1; transform: scale(1.1); }
+.annotate-icon.active { opacity: 1; background: var(--annotation-border); color: white; }
+.annotate-icon .annotation-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; background: var(--annotation-border); border-radius: 9px; font-size: 11px; font-weight: 600; color: white; display: none; align-items: center; justify-content: center; padding: 0 4px; }
+.annotate-icon.has-annotations .annotation-badge { display: flex; }
+.annotation-mode-active .message, .annotation-mode-active .index-item { cursor: pointer; transition: box-shadow 0.15s; }
+.annotation-mode-active .message:hover, .annotation-mode-active .index-item:hover { box-shadow: 0 0 0 2px var(--annotation-border); }
+.has-annotation { position: relative; }
+.has-annotation::before { content: ''; position: absolute; top: 0; right: -8px; width: 4px; height: 100%; background: var(--annotation-border); border-radius: 2px; }
+.annotation-bubble { position: absolute; left: 0; right: 0; background: var(--annotation-bg); border: 1px solid var(--annotation-border); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; color: var(--annotation-text); box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.annotation-bubble:hover { transform: translateX(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.annotation-bubble p { margin: 0 0 6px 0; }
+.annotation-bubble p:last-child { margin-bottom: 0; }
+.annotation-bubble code { background: rgba(0,0,0,0.08); padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
+.annotation-bubble strong { font-weight: 600; }
+.annotation-bubble em { font-style: italic; }
+.annotation-bubble a { color: var(--link-color); }
+.annotation-bubble-connector { position: absolute; left: -16px; top: 12px; width: 16px; height: 2px; background: var(--annotation-border); }
+#annotation-menu[open], #annotation-modal[open] { border: none; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); padding: 0; }
+#annotation-menu[open] { width: 280px; }
+#annotation-modal[open] { width: 90vw; max-width: 600px; display: flex; flex-direction: column; }
+#annotation-menu::backdrop, #annotation-modal::backdrop { background: rgba(0,0,0,0.5); }
+.annotation-menu-content { padding: 16px; }
+.annotation-menu-title { font-weight: 600; font-size: 1rem; color: var(--text-color); margin-bottom: 16px; text-align: center; }
+.annotation-menu-buttons { display: flex; flex-direction: column; gap: 8px; }
+.annotation-menu-buttons button { padding: 12px 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; border: none; text-align: left; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+.annotation-menu-buttons button svg { flex-shrink: 0; }
+.annotation-menu-btn-start { background: var(--annotation-border); color: white; }
+.annotation-menu-btn-start:hover { background: #d97706; }
+.annotation-menu-btn-load { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--assistant-border) !important; }
+.annotation-menu-btn-load:hover { background: var(--bg-color); }
+.annotation-menu-btn-cancel { background: transparent; color: var(--text-muted); }
+.annotation-menu-btn-cancel:hover { background: rgba(0,0,0,0.05); }
+.annotation-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 12px 12px 0 0; }
+.annotation-modal-header span { font-weight: 500; color: var(--text-color); }
+#annotation-close-btn { background: var(--text-muted); color: white; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 1.2rem; line-height: 1; }
+#annotation-close-btn:hover { background: #616161; }
+#annotation-input { width: 100%; min-height: 120px; padding: 16px; border: none; font-family: inherit; font-size: 0.95rem; resize: vertical; box-sizing: border-box; }
+#annotation-input:focus { outline: none; }
+.annotation-modal-buttons { display: flex; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--assistant-border); background: var(--bg-color); border-radius: 0 0 12px 12px; }
+.annotation-modal-buttons button { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; border: none; }
+#annotation-delete-btn { background: #ffebee; color: #c62828; }
+#annotation-delete-btn:hover { background: #ffcdd2; }
+#annotation-save-btn { background: var(--annotation-border); color: white; }
+#annotation-save-btn:hover { background: #d97706; }
+.annotation-status { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--annotation-border); color: white; padding: 10px 20px; border-radius: 24px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100; display: none; align-items: center; gap: 8px; }
+.annotation-status.visible { display: flex; }
+.annotation-status button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; }
+.annotation-status button:hover { background: rgba(255,255,255,0.3); }
+"""
+    return root_vars + theme_icon + annotation_css + _CSS_BODY
 
 
 # Default CSS for backwards compatibility

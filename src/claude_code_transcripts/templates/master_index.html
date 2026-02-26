@@ -3,7 +3,15 @@
 {% block title %}Claude Code Archive{% endblock %}
 
 {% block content %}
-        <h1>Claude Code Archive</h1>
+        <div class="header-row">
+            <h1>Claude Code Archive</h1>
+            <div id="archive-search-box">
+                <input type="text" id="archive-search-input" placeholder="Search sessions..." aria-label="Search sessions">
+                <button id="archive-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+            </div>
+        </div>
         <p style="color: var(--text-muted); margin-bottom: 24px;">{{ total_projects }} projects · {{ total_sessions }} sessions</p>
 
         {% for project in projects %}
@@ -19,4 +27,22 @@
             </a>
         </div>
         {% endfor %}
+
+        <dialog id="archive-search-modal">
+            <div class="search-modal-header">
+                <input type="text" id="archive-modal-search-input" placeholder="Search sessions..." aria-label="Search sessions">
+                <button id="archive-modal-search-btn" type="button" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                </button>
+                <button id="archive-modal-close-btn" type="button" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </div>
+            <div id="archive-search-status"></div>
+            <div id="archive-search-results"></div>
+        </dialog>
+
+        <script>
+{% include "archive-search.js" %}
+        </script>
 {%- endblock %}

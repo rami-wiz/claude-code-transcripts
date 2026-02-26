@@ -11,6 +11,8 @@ from claude_code_transcripts import (
     find_all_sessions,
     get_project_display_name,
     generate_batch_html,
+    _extract_session_search_content,
+    _build_search_index,
 )
 
 
@@ -530,3 +532,174 @@ class TestJsonCommandWithUrl:
 
         assert result.exit_code == 0
         assert (html_output / "index.html").exists()
+
+
+class TestExtractSessionSearchContent:
+    """Tests for _extract_session_search_content function."""
+
+    def test_extracts_user_prompts(self, output_dir):
+        """Test that user prompts are extracted correctly."""
+        session_file = output_dir / "test.jsonl"
+        session_file.write_text(
+            '{"type": "user", "timestamp": "2025-01-01T10:00:00.000Z", "message": {"role": "user", "content": "First user message"}}\n'
+            '{"type": "assistant", "timestamp": "2025-01-01T10:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "Response"}]}}\n'
+            '{"type": "user", "timestamp": "2025-01-01T10:01:00.000Z", "message": {"role": "user", "content": "Second user message"}}\n'
+        )
+
+        result = _extract_session_search_content(session_file)
+
+        assert "prompts" in result
+        assert "First user message" in result["prompts"]
+        assert "Second user message" in result["prompts"]
+
+    def test_extracts_tool_names(self, output_dir):
+        """Test that tool names are extracted from tool_use blocks."""
+        session_file = output_dir / "test.jsonl"
+        session_file.write_text(
+            '{"type": "user", "timestamp": "2025-01-01T10:00:00.000Z", "message": {"role": "user", "content": "Hello"}}\n'
+            '{"type": "assistant", "timestamp": "2025-01-01T10:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "ls"}}]}}\n'
+            '{"type": "assistant", "timestamp": "2025-01-01T10:00:10.000Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": "/test.py"}}]}}\n'
+        )
+
+        result = _extract_session_search_content(session_file)
+
+        assert "tools" in result
+        assert "Bash" in result["tools"]
+        assert "Edit" in result["tools"]
+
+    def test_extracts_file_paths(self, output_dir):
+        """Test that file paths are extracted from Write/Edit/Read tools."""
+        session_file = output_dir / "test.jsonl"
+        session_file.write_text(
+            '{"type": "user", "timestamp": "2025-01-01T10:00:00.000Z", "message": {"role": "user", "content": "Hello"}}\n'
+            '{"type": "assistant", "timestamp": "2025-01-01T10:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Write", "input": {"file_path": "/home/user/project/src/main.py"}}]}}\n'
+            '{"type": "assistant", "timestamp": "2025-01-01T10:00:10.000Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "/home/user/project/tests/test.py"}}]}}\n'
+        )
+
+        result = _extract_session_search_content(session_file)
+
+        assert "files" in result
+        # Should extract last 2 path components
+        assert "src/main.py" in result["files"]
+        assert "tests/test.py" in result["files"]
+
+    def test_respects_max_prompts_limit(self, output_dir):
+        """Test that prompt extraction respects max_prompts limit."""
+        session_file = output_dir / "test.jsonl"
+        lines = []
+        for i in range(25):
+            lines.append(
+                f'{{"type": "user", "timestamp": "2025-01-01T10:{i:02d}:00.000Z", "message": {{"role": "user", "content": "Message {i}"}}}}'
+            )
+        session_file.write_text("\n".join(lines) + "\n")
+
+        result = _extract_session_search_content(session_file, max_prompts=10)
+
+        assert len(result["prompts"]) <= 10
+
+    def test_extracts_assistant_responses(self, output_dir):
+        """Test that assistant text responses are extracted."""
+        session_file = output_dir / "test.jsonl"
+        session_file.write_text(
+            '{"type": "user", "timestamp": "2025-01-01T10:00:00.000Z", "message": {"role": "user", "content": "Hello"}}\n'
+            '{"type": "assistant", "timestamp": "2025-01-01T10:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "Here is my response"}]}}\n'
+        )
+
+        result = _extract_session_search_content(session_file)
+
+        assert "responses" in result
+        assert len(result["responses"]) > 0
+
+    def test_returns_empty_lists_for_invalid_file(self, output_dir):
+        """Test graceful handling of invalid/missing files."""
+        session_file = output_dir / "nonexistent.jsonl"
+
+        result = _extract_session_search_content(session_file)
+
+        assert result == {"prompts": [], "responses": [], "tools": [], "files": []}
+
+
+class TestBuildSearchIndex:
+    """Tests for _build_search_index function."""
+
+    def test_creates_search_index_file(self, mock_projects_dir, output_dir):
+        """Test that search-index.json file is created."""
+        projects = find_all_sessions(mock_projects_dir)
+
+        _build_search_index(projects, output_dir)
+
+        assert (output_dir / "search-index.json").exists()
+
+    def test_index_has_correct_structure(self, mock_projects_dir, output_dir):
+        """Test that search index has correct top-level structure."""
+        import json
+
+        projects = find_all_sessions(mock_projects_dir)
+        _build_search_index(projects, output_dir)
+
+        index = json.loads((output_dir / "search-index.json").read_text())
+
+        assert "version" in index
+        assert index["version"] == 1
+        assert "generated" in index
+        assert "projects" in index
+        assert isinstance(index["projects"], list)
+
+    def test_index_includes_all_projects(self, mock_projects_dir, output_dir):
+        """Test that all projects are included in the index."""
+        import json
+
+        projects = find_all_sessions(mock_projects_dir)
+        _build_search_index(projects, output_dir)
+
+        index = json.loads((output_dir / "search-index.json").read_text())
+
+        project_names = [p["name"] for p in index["projects"]]
+        assert "project-a" in project_names
+        assert "project-b" in project_names
+
+    def test_index_includes_session_content(self, mock_projects_dir, output_dir):
+        """Test that sessions include searchable content."""
+        import json
+
+        projects = find_all_sessions(mock_projects_dir)
+        _build_search_index(projects, output_dir)
+
+        index = json.loads((output_dir / "search-index.json").read_text())
+
+        project_a = next(p for p in index["projects"] if p["name"] == "project-a")
+        assert len(project_a["sessions"]) > 0
+
+        session = project_a["sessions"][0]
+        assert "id" in session
+        assert "path" in session
+        assert "date" in session
+        assert "summary" in session
+        assert "content" in session
+        assert "prompts" in session["content"]
+        assert "tools" in session["content"]
+        assert "files" in session["content"]
+
+
+class TestSearchIndexInGenerateBatchHtml:
+    """Tests for search index generation in generate_batch_html."""
+
+    def test_creates_search_index_json(self, mock_projects_dir, output_dir):
+        """Test that generate_batch_html creates search-index.json."""
+        generate_batch_html(mock_projects_dir, output_dir)
+
+        assert (output_dir / "search-index.json").exists()
+
+    def test_search_index_generated_with_archive(self, mock_projects_dir, output_dir):
+        """Test that search index is generated alongside the archive."""
+        import json
+
+        generate_batch_html(mock_projects_dir, output_dir)
+
+        # Both master index and search index should exist
+        assert (output_dir / "index.html").exists()
+        assert (output_dir / "search-index.json").exists()
+
+        # Search index should be valid JSON
+        index = json.loads((output_dir / "search-index.json").read_text())
+        assert "projects" in index
