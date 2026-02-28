@@ -749,3 +749,171 @@ class TestSearchIndexInGenerateBatchHtml:
         # Search index should be valid JSON
         index = json.loads((output_dir / "search-index.json").read_text())
         assert "projects" in index
+
+
+class TestWebCommandRepoFiltering:
+    """Tests for the web command repo display and filtering."""
+
+    def test_detect_github_repo_from_session(self):
+        """Test that detect_github_repo extracts repo from session loglines."""
+        from claude_code_transcripts import detect_github_repo
+
+        loglines = [
+            {
+                "type": "assistant",
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "content": "remote: Create a pull request for 'my-branch' on GitHub by visiting:\nremote:      https://github.com/simonw/datasette/pull/new/my-branch",
+                        }
+                    ],
+                },
+            }
+        ]
+        repo = detect_github_repo(loglines)
+        assert repo == "simonw/datasette"
+
+    def test_detect_github_repo_returns_none_when_not_found(self):
+        """Test that detect_github_repo returns None when no repo found."""
+        from claude_code_transcripts import detect_github_repo
+
+        loglines = [
+            {
+                "type": "user",
+                "message": {"role": "user", "content": "Hello"},
+            }
+        ]
+        repo = detect_github_repo(loglines)
+        assert repo is None
+
+    def test_enrich_sessions_with_repos(self):
+        """Test enriching sessions with repo information from session metadata."""
+        from claude_code_transcripts import enrich_sessions_with_repos
+
+        # Mock sessions from the API list with session_context
+        sessions = [
+            {
+                "id": "sess1",
+                "title": "Session 1",
+                "created_at": "2025-01-01T10:00:00Z",
+                "session_context": {
+                    "outcomes": [
+                        {
+                            "type": "git_repository",
+                            "git_info": {"repo": "simonw/datasette", "type": "github"},
+                        }
+                    ]
+                },
+            },
+            {
+                "id": "sess2",
+                "title": "Session 2",
+                "created_at": "2025-01-02T10:00:00Z",
+                "session_context": {},
+            },
+        ]
+
+        enriched = enrich_sessions_with_repos(sessions)
+
+        assert enriched[0]["repo"] == "simonw/datasette"
+        assert enriched[1]["repo"] is None
+
+    def test_extract_repo_from_session_outcomes(self):
+        """Test extracting repo from session_context.outcomes."""
+        from claude_code_transcripts import extract_repo_from_session
+
+        session = {
+            "session_context": {
+                "outcomes": [
+                    {
+                        "type": "git_repository",
+                        "git_info": {"repo": "simonw/llm", "type": "github"},
+                    }
+                ]
+            }
+        }
+        assert extract_repo_from_session(session) == "simonw/llm"
+
+    def test_extract_repo_from_session_sources_url(self):
+        """Test extracting repo from session_context.sources URL."""
+        from claude_code_transcripts import extract_repo_from_session
+
+        session = {
+            "session_context": {
+                "sources": [
+                    {
+                        "type": "git_repository",
+                        "url": "https://github.com/simonw/datasette",
+                    }
+                ]
+            }
+        }
+        assert extract_repo_from_session(session) == "simonw/datasette"
+
+    def test_extract_repo_from_session_no_context(self):
+        """Test extracting repo when no session_context exists."""
+        from claude_code_transcripts import extract_repo_from_session
+
+        session = {"id": "sess1", "title": "No context"}
+        assert extract_repo_from_session(session) is None
+
+    def test_filter_sessions_by_repo(self):
+        """Test filtering sessions by repo."""
+        from claude_code_transcripts import filter_sessions_by_repo
+
+        sessions = [
+            {"id": "sess1", "title": "Session 1", "repo": "simonw/datasette"},
+            {"id": "sess2", "title": "Session 2", "repo": "simonw/llm"},
+            {"id": "sess3", "title": "Session 3", "repo": None},
+        ]
+
+        filtered = filter_sessions_by_repo(sessions, "simonw/datasette")
+        assert len(filtered) == 1
+        assert filtered[0]["id"] == "sess1"
+
+    def test_filter_sessions_by_repo_none_returns_all(self):
+        """Test that filtering with None repo returns all sessions."""
+        from claude_code_transcripts import filter_sessions_by_repo
+
+        sessions = [
+            {"id": "sess1", "title": "Session 1", "repo": "simonw/datasette"},
+            {"id": "sess2", "title": "Session 2", "repo": None},
+        ]
+
+        filtered = filter_sessions_by_repo(sessions, None)
+        assert len(filtered) == 2
+
+    def test_format_session_for_display_with_repo(self):
+        """Test formatting session display with repo first."""
+        from claude_code_transcripts import format_session_for_display
+
+        session = {
+            "id": "sess1",
+            "title": "Fix the bug",
+            "created_at": "2025-01-15T10:30:00.000Z",
+            "repo": "simonw/datasette",
+        }
+
+        display = format_session_for_display(session)
+        # Repo should appear first
+        assert display.startswith("simonw/datasette")
+        assert "2025-01-15T10:30:00" in display
+        assert "Fix the bug" in display
+
+    def test_format_session_for_display_without_repo(self):
+        """Test formatting session display without repo."""
+        from claude_code_transcripts import format_session_for_display
+
+        session = {
+            "id": "sess1",
+            "title": "Fix the bug",
+            "created_at": "2025-01-15T10:30:00.000Z",
+            "repo": None,
+        }
+
+        display = format_session_for_display(session)
+        # Should show (no repo) placeholder
+        assert "(no repo)" in display
+        assert "Fix the bug" in display
