@@ -41,6 +41,9 @@ DEFAULT_THEME = {
     "accent_bg": "#fff8e1",
     "accent_border": "#ff9800",
     "accent_color": "#e65100",
+    "annotation_bg": "#fffbeb",
+    "annotation_border": "#f59e0b",
+    "annotation_text": "#92400e",
 }
 
 

@@ -43,6 +43,9 @@ class TestDefaultTheme:
             "commit_border",
             "commit_text",
             "link_color",
+            "annotation_bg",
+            "annotation_border",
+            "annotation_text",
         ]
         for key in required_keys:
             assert key in DEFAULT_THEME, f"Missing key: {key}"
